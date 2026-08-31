@@ -247,7 +247,7 @@ Frontend harus memanggil path underscore.
 | `POST /letters/parse-incoming` | `letters.manage` | Preview parse |
 | `GET /letter_templates/:id/variables` | `letters.manage` | Placeholder `.docx` + metadata format nomor |
 | `POST /letter_categories/:id/preview-number` | `letters.view` | Preview nomor surat dengan segmen dinamis |
-| `GET /backups`, `POST /backups/generate`, restore, download | System admin | Backup |
+| `GET /backup`, `POST /backup` | `backup.manage` | Export ZIP / restore replace (lihat §6.10) |
 | `GET/POST/DELETE /push/subscribe` | Auth | Web Push |
 
 ## 5. Model Role & Permission (Custom RBAC)
@@ -343,6 +343,13 @@ Parse CSV/XLSX → validasi → bulk insert → email async.
 - Login sukses: terbitkan JWT; set cookie httpOnly `token` + kembalikan `token` di body (PRD §5.1).
 - Middleware/global hook: baca cookie atau `Authorization: Bearer`.
 - Rate-limit `/auth/login` dan `/public/recruitment/*` (implementasi proyek; Redis opsional).
+
+### 6.10 Backup & Restore
+- `GET /backup` mengekspor seluruh tabel terdaftar (`backupTables` di `services/backup.go`) ke `data.json` plus file storage (overwrite-by-key).
+- `POST /backup` adalah **replace penuh**, bukan merge-by-ID: `TRUNCATE … CASCADE` semua tabel di `backupTables` (bukan `db_versions`), lalu `INSERT` isi ZIP, lalu `setval` sequence.
+- Unique sekunder (`permission.code`, `role.name`, `user.username`/`email`, dll.) tidak di-merge. Merge-by-ID menabrak unique bila seed target punya ID berbeda untuk code yang sama.
+- Setelah restore: `SyncMissingPermissions` + `SyncMissingSeedData` (permission/kategori baru yang belum ada di ZIP lama).
+- Storage objek **tidak** dihapus massal — hanya di-upload ulang per key. UI mengarahkan login ulang karena JWT masih memegang user ID lama.
 
 ## 7. Seed Data
 

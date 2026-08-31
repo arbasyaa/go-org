@@ -1,8 +1,10 @@
 "use client"
 
 import { useRef, useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/page-header"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -13,7 +15,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getApiBase } from "@/lib/api"
-import { getStoredToken } from "@/lib/auth"
+import { getStoredToken, setStoredToken } from "@/lib/auth"
 
 type RestoreResult = {
   files_restored: number
@@ -22,6 +24,7 @@ type RestoreResult = {
 }
 
 export default function AdminBackupPage() {
+  const router = useRouter()
   const [restoring, setRestoring] = useState(false)
   const [result, setResult] = useState<RestoreResult | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -30,6 +33,10 @@ export default function AdminBackupPage() {
     e.preventDefault()
     const file = fileRef.current?.files?.[0]
     if (!file) return
+    const confirmed = window.confirm(
+      "Restore akan MENGGANTI seluruh data database dengan isi backup. Data lokal yang tidak ada di ZIP akan dihapus. Setelah selesai Anda harus login ulang. Lanjutkan?"
+    )
+    if (!confirmed) return
     setRestoring(true)
     setResult(null)
     try {
@@ -47,7 +54,9 @@ export default function AdminBackupPage() {
         throw new Error(json.message || "Gagal restore")
       }
       setResult(json.data as RestoreResult)
-      toast.success("Backup berhasil dipulihkan")
+      setStoredToken(null)
+      toast.success("Backup berhasil dipulihkan. Silakan login ulang.")
+      router.replace("/login")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal restore")
     } finally {
@@ -87,15 +96,24 @@ export default function AdminBackupPage() {
           <CardHeader>
             <CardTitle>Restore Backup</CardTitle>
             <CardDescription>
-              Pulihkan database dan file storage dari arsip ZIP backup. Data
-              dengan ID yang sama akan ditimpa dengan isi backup; data lain
-              tidak dihapus.
+              Pulihkan database dan file storage dari arsip ZIP. Tabel yang
+              ikut di-backup akan dikosongkan lalu diisi ulang dari ZIP —
+              data lokal yang tidak ada di arsip ikut terhapus. File storage
+              ditimpa per key, tidak dihapus massal.
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <Alert variant="destructive" className="mb-4">
+              <AlertTitle>Operasi destruktif</AlertTitle>
+              <AlertDescription>
+                Restore mengganti isi database. Session login saat ini tidak
+                berlaku lagi setelah selesai; Anda akan diarahkan ke halaman
+                login.
+              </AlertDescription>
+            </Alert>
             <form onSubmit={handleRestore} className="space-y-3">
               <Input ref={fileRef} type="file" accept=".zip" required />
-              <Button type="submit" disabled={restoring}>
+              <Button type="submit" variant="destructive" disabled={restoring}>
                 {restoring ? "Memulihkan..." : "Restore dari ZIP"}
               </Button>
             </form>

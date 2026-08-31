@@ -12,9 +12,12 @@ import (
 
 	"backend/internal/auth"
 	"backend/internal/permission"
+	"backend/internal/seed"
 	"backend/internal/storageutil"
+	"backend/models"
 	"backend/services"
 
+	"github.com/lrndwy/gokil/orm"
 	"github.com/lrndwy/gokil/views"
 )
 
@@ -223,10 +226,18 @@ func importBackup(ctx *views.Context) error {
 		if err != nil {
 			return ctx.Error(500, err.Error())
 		}
+		if err := seed.SyncMissingPermissions(reqCtx); err != nil {
+			return ctx.Error(500, "sync permissions: "+err.Error())
+		}
+		if err := seed.SyncMissingSeedData(reqCtx); err != nil {
+			return ctx.Error(500, "sync seed data: "+err.Error())
+		}
 	}
 
-	services.LogActivity(reqCtx, user.ID, "restore", "backup", 0,
-		"Memulihkan backup sistem", ctx.Request.RemoteAddr)
+	if _, err := orm.GetByID[models.User](reqCtx, user.ID); err == nil {
+		services.LogActivity(reqCtx, user.ID, "restore", "backup", 0,
+			"Memulihkan backup sistem", ctx.Request.RemoteAddr)
+	}
 	return ctx.Success(200, "backup restored", map[string]any{
 		"files_restored": filesRestored,
 		"files_failed":   filesFailed,

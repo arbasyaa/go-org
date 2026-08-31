@@ -55,6 +55,14 @@ func quoteIdent(name string) string {
 	return `"` + name + `"`
 }
 
+func truncateBackupTablesSQL() string {
+	names := make([]string, len(backupTables))
+	for i, t := range backupTables {
+		names[i] = quoteIdent(t.Table)
+	}
+	return "TRUNCATE " + joinComma(names) + " CASCADE"
+}
+
 // ExportJSON membaca seluruh isi tabel via SELECT * sehingga semua kolom
 // (termasuk password_hash yang di-hide dari JSON model) ikut ter-backup.
 func (BackupService) ExportJSON(ctx context.Context) (map[string]any, error) {
@@ -170,12 +178,15 @@ func sanitizeStorageKey(key string) string {
 	return key
 }
 
-// RestoreJSON meng-upsert setiap baris dengan ID eksplisit (ON CONFLICT (id)
-// DO UPDATE) dalam satu transaksi, lalu menyinkronkan sequence tiap tabel
+// RestoreJSON mengganti seluruh isi tabel backup dengan data ZIP (TRUNCATE
+// lalu INSERT) dalam satu transaksi, lalu menyinkronkan sequence tiap tabel
 // agar insert berikutnya tidak bentrok dengan ID hasil restore.
 func (BackupService) RestoreJSON(ctx context.Context, payload map[string]json.RawMessage) (map[string]int, error) {
 	stats := map[string]int{}
 	err := orm.WithTx(ctx, func(txCtx context.Context, tx *orm.Tx) error {
+		if _, err := tx.ExecContext(txCtx, truncateBackupTablesSQL()); err != nil {
+			return fmt.Errorf("truncate: %w", err)
+		}
 		for _, t := range backupTables {
 			raw, ok := payload[t.Key]
 			if !ok || len(raw) == 0 || string(raw) == "null" {
@@ -186,7 +197,7 @@ func (BackupService) RestoreJSON(ctx context.Context, payload map[string]json.Ra
 				return fmt.Errorf("%s: %w", t.Key, err)
 			}
 			for _, row := range items {
-				if err := upsertRow(txCtx, tx, t.Table, row); err != nil {
+				if err := insertRow(txCtx, tx, t.Table, row); err != nil {
 					return fmt.Errorf("%s: %w", t.Key, err)
 				}
 			}
@@ -205,7 +216,7 @@ func (BackupService) RestoreJSON(ctx context.Context, payload map[string]json.Ra
 	return stats, nil
 }
 
-func upsertRow(ctx context.Context, tx *orm.Tx, table string, row map[string]any) error {
+func insertRow(ctx context.Context, tx *orm.Tx, table string, row map[string]any) error {
 	if _, ok := row["id"]; !ok {
 		return fmt.Errorf("row tanpa kolom id")
 	}
@@ -227,24 +238,14 @@ func upsertRow(ctx context.Context, tx *orm.Tx, table string, row map[string]any
 	colNames := make([]string, len(cols))
 	placeholders := make([]string, len(cols))
 	args := make([]any, len(cols))
-	updates := []string{}
 	for i, col := range cols {
 		colNames[i] = quoteIdent(col)
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 		args[i] = normalizeSQLValue(row[col])
-		if col != "id" {
-			updates = append(updates, fmt.Sprintf("%s = EXCLUDED.%s", quoteIdent(col), quoteIdent(col)))
-		}
 	}
 
-	var query string
-	if len(updates) == 0 {
-		query = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (id) DO NOTHING",
-			quoteIdent(table), joinComma(colNames), joinComma(placeholders))
-	} else {
-		query = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (id) DO UPDATE SET %s",
-			quoteIdent(table), joinComma(colNames), joinComma(placeholders), joinComma(updates))
-	}
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+		quoteIdent(table), joinComma(colNames), joinComma(placeholders))
 	_, err := tx.ExecContext(ctx, query, args...)
 	return err
 }
@@ -275,7 +276,7 @@ func syncSequence(ctx context.Context, tx *orm.Tx, table string) error {
 	}
 	_, err := tx.ExecContext(ctx,
 		"SELECT setval(pg_get_serial_sequence($1, 'id'), $2, true)",
-		quoteIdent(table), *maxID)
+		table, *maxID)
 	return err
 }
 
