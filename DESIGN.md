@@ -348,6 +348,7 @@ Parse CSV/XLSX → validasi → bulk insert → email async.
 - `GET /backup` mengekspor seluruh tabel terdaftar (`backupTables` di `services/backup.go`) ke `data.json` plus file storage (overwrite-by-key).
 - `POST /backup` adalah **replace penuh**, bukan merge-by-ID: `TRUNCATE … CASCADE` semua tabel di `backupTables` (bukan `db_versions`), lalu `INSERT` isi ZIP, lalu `setval` sequence.
 - Unique sekunder (`permission.code`, `role.name`, `user.username`/`email`, dll.) tidak di-merge. Merge-by-ID menabrak unique bila seed target punya ID berbeda untuk code yang sama.
+- Restore melewati baris `activity_log` yang `user_id`-nya tidak ada di payload `users` (user sudah dihapus / orphan FK). Tanpa ini INSERT kena `activity_log_user_id_fkey` (SQLSTATE 23503). `activity_log.user_id` nullable + `ON DELETE SET NULL` agar hapus user tidak meninggalkan orphan.
 - Setelah restore: `SyncMissingPermissions` + `SyncMissingSeedData` (permission/kategori baru yang belum ada di ZIP lama).
 - Storage objek **tidak** dihapus massal — hanya di-upload ulang per key. UI mengarahkan login ulang karena JWT masih memegang user ID lama.
 

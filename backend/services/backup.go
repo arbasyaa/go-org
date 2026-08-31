@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/lrndwy/gokil/orm"
@@ -187,6 +188,7 @@ func (BackupService) RestoreJSON(ctx context.Context, payload map[string]json.Ra
 		if _, err := tx.ExecContext(txCtx, truncateBackupTablesSQL()); err != nil {
 			return fmt.Errorf("truncate: %w", err)
 		}
+		userIDs := map[int64]struct{}{}
 		for _, t := range backupTables {
 			raw, ok := payload[t.Key]
 			if !ok || len(raw) == 0 || string(raw) == "null" {
@@ -196,17 +198,25 @@ func (BackupService) RestoreJSON(ctx context.Context, payload map[string]json.Ra
 			if err := json.Unmarshal(raw, &items); err != nil {
 				return fmt.Errorf("%s: %w", t.Key, err)
 			}
+			if t.Table == "user" {
+				userIDs = collectRowIDs(items)
+			}
+			inserted := 0
 			for _, row := range items {
+				if t.Table == "activity_log" && shouldSkipActivityLog(row, userIDs) {
+					continue
+				}
 				if err := insertRow(txCtx, tx, t.Table, row); err != nil {
 					return fmt.Errorf("%s: %w", t.Key, err)
 				}
+				inserted++
 			}
-			if len(items) > 0 {
+			if inserted > 0 {
 				if err := syncSequence(txCtx, tx, t.Table); err != nil {
 					return fmt.Errorf("%s: %w", t.Key, err)
 				}
 			}
-			stats[t.Key] = len(items)
+			stats[t.Key] = inserted
 		}
 		return nil
 	})
@@ -214,6 +224,64 @@ func (BackupService) RestoreJSON(ctx context.Context, payload map[string]json.Ra
 		return stats, err
 	}
 	return stats, nil
+}
+
+// collectRowIDs mengambil id dari baris JSON hasil Unmarshal (angka JSON
+// menjadi float64; backup lama bisa menyimpan id sebagai string).
+func collectRowIDs(items []map[string]any) map[int64]struct{} {
+	ids := make(map[int64]struct{}, len(items))
+	for _, row := range items {
+		if id, ok := rowInt64(row, "id"); ok && id > 0 {
+			ids[id] = struct{}{}
+		}
+	}
+	return ids
+}
+
+func rowInt64(row map[string]any, key string) (int64, bool) {
+	v, ok := row[key]
+	if !ok || v == nil {
+		return 0, false
+	}
+	switch n := v.(type) {
+	case int64:
+		return n, true
+	case int:
+		return int64(n), true
+	case int32:
+		return int64(n), true
+	case float64:
+		if n != n || n < 1 {
+			return 0, false
+		}
+		return int64(n), true
+	case json.Number:
+		i, err := n.Int64()
+		return i, err == nil && i > 0
+	case string:
+		i, err := strconv.ParseInt(strings.TrimSpace(n), 10, 64)
+		return i, err == nil && i > 0
+	default:
+		return 0, false
+	}
+}
+
+// shouldSkipActivityLog menolak baris log yang merujuk user yang tidak ada
+// di payload restore. Tanpa ini INSERT kena activity_log_user_id_fkey
+// (SQLSTATE 23503) — biasanya sisa user yang sudah dihapus: skema lama
+// user_id NOT NULL + ON DELETE SET NULL, jadi DELETE user gagal men-null-kan
+// log dan/atau tabel dibuat ORM tanpa FK sehingga orphan tertinggal.
+func shouldSkipActivityLog(row map[string]any, userIDs map[int64]struct{}) bool {
+	v, ok := row["user_id"]
+	if !ok || v == nil {
+		return false
+	}
+	uid, parsed := rowInt64(row, "user_id")
+	if !parsed || uid <= 0 {
+		return true
+	}
+	_, exists := userIDs[uid]
+	return !exists
 }
 
 func insertRow(ctx context.Context, tx *orm.Tx, table string, row map[string]any) error {
