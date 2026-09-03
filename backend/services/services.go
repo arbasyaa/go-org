@@ -199,6 +199,9 @@ func enrichUsers(ctx context.Context, users []*models.User) []map[string]any {
 		if name, ok := roleMap[u.RoleID]; ok {
 			item["role"] = name
 		}
+		if u.BirthDate != nil {
+			item["birth_date"] = u.BirthDate.Format("2006-01-02")
+		}
 		out[i] = item
 	}
 	return out

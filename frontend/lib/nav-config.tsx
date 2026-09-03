@@ -32,6 +32,11 @@ export const memberNavItems: NavItem[] = [
     icon: <UserIcon className="size-4" />,
   },
   {
+    title: "Anggota",
+    url: "/members",
+    icon: <UsersIcon className="size-4" />,
+  },
+  {
     title: "Event",
     url: "/events",
     icon: <CalendarIcon className="size-4" />,

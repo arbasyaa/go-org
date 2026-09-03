@@ -43,6 +43,7 @@ import (
 	app_me_avatar "backend/app/me/avatar"
 	app_me_password "backend/app/me/password"
 	app_me_permissions "backend/app/me/permissions"
+	app_members "backend/app/members"
 	app_permission_requests "backend/app/permission_requests"
 	app_permission_requests_me "backend/app/permission_requests/me"
 	app_permissions "backend/app/permissions"
@@ -139,6 +140,7 @@ func init() {
 	framework.RegisterRoute("POST", "/me/avatar", app_me_avatar.POST)
 	framework.RegisterRoute("PUT", "/me/password", app_me_password.PUT)
 	framework.RegisterRoute("GET", "/me/permissions", app_me_permissions.GET)
+	framework.RegisterRoute("GET", "/members", app_members.GET)
 	framework.RegisterRoute("POST", "/permission_requests", app_permission_requests.POST)
 	framework.RegisterRoute("GET", "/permission_requests/me", app_permission_requests_me.GET)
 	framework.RegisterRoute("GET", "/permissions", app_permissions.GET)
