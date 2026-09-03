@@ -30,6 +30,12 @@ import { apiRequest } from "@/lib/api"
 import { getMe } from "@/lib/auth"
 import { storageUrl } from "@/lib/storage-url"
 import type { User } from "@/lib/types"
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 const profileSchema = z.object({
   full_name: z.string().min(1, "Nama wajib diisi"),
@@ -164,27 +170,45 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-6">
-                  <div className="relative">
-                    <Avatar size="lg">
-                      <AvatarImage
-                        src={user.avatar_url ? storageUrl(user.avatar_url) : ""}
-                        alt={user.full_name}
-                      />
-                      <AvatarFallback>
-                        {(user.full_name || user.username || "U")
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    {uploadingAvatar && (
-                      <div className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60">
-                        <Loader2Icon className="size-5 animate-spin" />
+                  <Dialog>
+                    <DialogTrigger
+                      className="cursor-zoom-in disabled:cursor-default"
+                      disabled={!user.avatar_url}
+                    >
+                      <div className="relative">
+                        <Avatar size="lg">
+                          <AvatarImage
+                            src={user.avatar_url ? storageUrl(user.avatar_url) : ""}
+                            alt={user.full_name}
+                          />
+                          <AvatarFallback>
+                            {(user.full_name || user.username || "U")
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {uploadingAvatar && (
+                          <div className="absolute inset-0 flex items-center justify-center rounded-full bg-background/60">
+                            <Loader2Icon className="size-5 animate-spin" />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    </DialogTrigger>
+                    {user.avatar_url ? (
+                      <DialogContent className="w-fit">
+                        <DialogTitle className="sr-only">Foto Profil</DialogTitle>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={storageUrl(user.avatar_url)}
+                          alt={user.full_name}
+                          className="size-64 rounded-full object-cover"
+                        />
+                      </DialogContent>
+                    ) : null}
+                  </Dialog>
                   <div className="space-y-2">
                     <Button
                       variant="outline"
