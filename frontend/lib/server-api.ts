@@ -24,3 +24,18 @@ export async function serverGet<T>(path: string): Promise<T | null> {
     return null
   }
 }
+
+/**
+ * GET backend dari Server Component untuk endpoint publik (tanpa cookie),
+ * mis. `GET /settings` yang hanya butuh branding + flag.
+ */
+export async function serverPublicGet<T>(path: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${BASE}${path}`, { cache: "no-store" })
+    if (!res.ok) return null
+    const body = (await res.json()) as { data?: T }
+    return body.data ?? null
+  } catch {
+    return null
+  }
+}

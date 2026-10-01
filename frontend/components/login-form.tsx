@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { login } from "@/lib/auth"
@@ -90,11 +89,10 @@ export function LoginForm({
             {loading ? "Memproses..." : "Masuk"}
           </Button>
         </Field>
+        {/* Sengaja bukan tautan: pendaftaran hanya lewat Sekretaris Wilayah,
+            dan alamat halaman daftarnya tidak dipublikasikan. */}
         <FieldDescription className="text-center">
-          Belum punya akun?{" "}
-          <Link href="/register" className="underline underline-offset-4">
-            Daftar
-          </Link>
+          Belum punya akun? Hubungi Sekretaris Wilayah
         </FieldDescription>
       </FieldGroup>
     </form>
