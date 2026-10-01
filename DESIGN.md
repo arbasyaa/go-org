@@ -16,7 +16,7 @@ Panduan kerja AI agent: [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md).
 
 **Framework backend:** gokil adalah framework buatan sendiri (file-based routing ala Next.js + pola Django-like: settings, models, migrations, cron). Repo: <https://github.com/lrndwy/gokil.git>. Versi awal proyek: `v0.8.1`; setelah patch Fase 0 → bump ke `v0.9.0+` (lihat §0.1 dan §13).
 
-**Desain UI:** seluruh tampilan memakai komponen shadcn yang sudah terpasang / ditambahkan lewat CLI. Preset `base-mira` + token CSS di [`frontend/app/globals.css`](frontend/app/globals.css) adalah **satu-satunya** sumber warna/radius (putih + aksen indigo; palet divisi `--division-1..6`). Tidak menambah palette custom di luar token tersebut. **Tampilan selalu terang** — dark mode dihapus, field `theme` di settings tidak lagi dipakai UI.
+**Desain UI:** seluruh tampilan memakai komponen shadcn yang sudah terpasang / ditambahkan lewat CLI. Preset `base-mira` + token CSS di [`frontend/app/globals.css`](frontend/app/globals.css) adalah **satu-satunya** sumber warna/radius (putih + aksen biru Permikomnas; palet divisi `--division-1..8`). Tidak menambah palette custom di luar token tersebut. **Tampilan selalu terang** — dark mode dihapus, field `theme` di settings tidak lagi dipakai UI.
 
 Blok shadcn yang sudah di-install:
 - `npx shadcn@latest add login-02` → `components/login-form.tsx`, `app/login`
@@ -41,7 +41,7 @@ Diverifikasi dari source `gokil@v0.8.1`. Agent **wajib** mengikuti aturan workar
 | `ctx.DB()` selalu nil | Jangan dipakai | Ambil DB dari `orm.DBFromContext(ctx.Request.Context())`. Patch: samakan context key. |
 | Cron hanya `Every time.Duration` | Scheduler event status | Job interval 1 menit (cukup). Set `Logger` / `OnError` eksplisit. Tidak ada distributed lock — 1 proses cron. |
 | Migration hanya deteksi ADD COLUMN; Postgres-only | Perubahan skema kompleks | Tulis SQL manual di `migrations/` bila perlu DROP/ALTER/INDEX. |
-| Router linear; method mismatch → 404 | `/users/me` vs `/users/:id` | Letakkan path statis agar terdaftar sebelum dinamis; regenerate routes. |
+| Router linear; method mismatch → 404 | `/users/me` vs `/users/:id` | `generateroutes` mengurutkan route per path, jadi segmen statis yang secara alfabet jatuh setelah `:` **tertutup**: `GET /letters/export` (baris 142) selalu kalah oleh `GET /letters/:id` (baris 137) → 400 `invalid id`. Aturan: jangan menambah route statis 2-segmen di bawah resource yang punya `/:id`; gabungkan ke handler list (`GET /letters?export=csv`) atau naikkan jumlah segmennya. Dijaga otomatis oleh `app/register_test.go` (`TestRegisterHasNoShadowedRoute`) — jalankan test setelah `gokil generateroutes`. |
 | Docs gokil menyebut API yang belum ada | Compile error jika diikuti | Percaya source & proyek ini, bukan `docs/views/*.md` gokil yang usang. |
 
 **Prasyarat Fase 0** (repo terpisah `~/MyProjects/gokil`): fix `gid`, fix `WithTx`, per-route middleware, multipart helpers, `ctx.DB`, envelope `success/message/errors`, panic recovery + CORS + access log, opsional `ForUpdate`. Tag `v0.9.0`, bump `backend/go.mod`.
@@ -132,6 +132,17 @@ Aturan yang dijaga supaya aplikasi tetap ringan (diukur di build produksi, cold 
 | Animasi masuk memakai CSS (`@keyframes fade-in-up` + `@utility animate-fade-in-up` di `globals.css`, helper `lib/motion.ts`) — **bukan** library animasi | Nol byte JS tambahan, hanya transform+opacity (GPU, tanpa layout shift), aman untuk LCP |
 | Satu gerakan orkestrasi per halaman: daftar kartu `fadeInDelay(index)` (maks 8 langkah, 45 ms), konten halaman admin fade sekali | Menghindari efek tersebar (ciri slop) sekaligus tidak menunda konten terbaca |
 | `prefers-reduced-motion` memaksa `animation-duration: 0.01ms` **dan** `animation-delay: 0ms` | Tidak ada jeda kosong/elemen transparan bagi pengguna yang mematikan animasi |
+
+### 1.3 Aturan render & data (frontend)
+
+Kelas bug yang sudah pernah terjadi — jangan diulang:
+
+| Aturan | Kenapa |
+|---|---|
+| Server Component ambil data lewat **`serverGet`** (`lib/server-api.ts`, membaca cookie `token`), **bukan** `apiRequest` | `apiRequest` mengambil token dari `localStorage`/memori browser yang tidak ada di server → backend balas 401 → `notFound()` → halaman selalu 404 (pernah terjadi di `/admin/events/:id/edit`). |
+| Jangan hitung **`getApiBase()` saat render** (termasuk di dalam `href`) | Nilainya beda di server (URL internal) dan browser (proxy same-origin). React **tidak menambal** atribut yang beda saat hidrasi → peringatan hydration + link menunjuk host internal di production (pernah terjadi di tombol Download Backup & Unduh surat). Untuk `href`, pakai path proxy relatif `/api/backend/...` — rewrite-nya aktif di semua mode dan unduhan same-origin tetap membawa cookie `token`. |
+| Setiap halaman punya tepat satu `<h1>` | `PageHeader` menyediakannya sebagai `sr-only` karena judul visualnya berupa breadcrumb (`span`). Tanpa ini dokumen tak punya heading/landmark (WCAG 1.3.1). |
+| `getRowId` tabel harus menunjuk field yang benar-benar ada | Baris rekap absensi tidak punya `id` (gabungan roster + absensi) → semuanya menjadi `"undefined"` dan React melempar peringatan duplicate key. Pakai `user_id`. |
 
 ## 2. Domain Model → Entity Mapping
 
@@ -260,7 +271,8 @@ Placeholder: `{NOMOR_SURAT}`, `{NAMA_ORGANISASI}`, … Alias legacy `{NOMOR}` / 
 
 ### 2.13 Catatan ORM
 - Relasi: `orm.BelongsTo`, `orm.HasMany`, `orm.ManyMany` (FK `int64`).
-- Field JSON: `json.RawMessage` + `type:json` (bukan `map[string]any` mentah).
+- **Kolom nullable wajib pointer.** Kolom FK yang `ON DELETE SET NULL` (`created_by_id` di Event/Letter/Announcement/Recruitment/FinanceTransaction/StorageFile, `violation.user_id`+`issued_by_id`, `activity_log.user_id`) harus bertipe `*int64` di model. Kalau `int64`, satu baris NULL membuat **seluruh** SELECT gagal (`converting NULL to int64 is unsupported`) dan endpoint balas 500 untuk semua orang — bukan hanya melewati baris itu. Pemakaian cocokkan lewat helper `ownedBy(creator, userID)`, jangan `== user.ID` langsung.
+- Field JSON: `models.JSONField` (`type:json;null`) — maps NULL → `{}` saat scan. Jangan `json.RawMessage` telanjang pada kolom nullable: `json.RawMessage` **tidak** bisa men-scan NULL dan mematikan endpoint list-nya.
 - Tambahkan `json` tags pada model/DTO agar API tidak mengekspos `Author.Ref` / PascalCase mentah bila diperlukan.
 - Hindari `models.Save` pada instance baru (bisa jadi UPDATE `WHERE id = 0`); pakai `orm.Create`.
 
@@ -372,8 +384,8 @@ Jalankan sebagai proses terpisah: `go run ./cmd/backend cron`. Set `Logger`/`OnE
 3. Render `number_format_template` → `letter_code`:
    - **Placeholder sistem (auto):** `{number}` (default 3 digit: 001, 002, …), `{number:N}` (zero-pad eksplisit), `{code}`, `{month_roman}`, `{year}`, alias `{nomor}`, `{letter_code}`. Gunakan `{number:0}` untuk nomor tanpa zero-pad.
    - **Placeholder custom (input per surat):** segmen dinamis seperti `{unit}`, `{tujuan}` — wajib diisi di form surat keluar; nilai disimpan di `variable_values`.
-   - **Teks literal** di template (mis. `Permikomnas Jateng`) tetap statis per kategori.
-   - Contoh kategori `SPm-i` + template `{number:3}/{code}/{unit}/Permikomnas Jateng/{month_roman}/{year}` → `001/SPm-i/PAN-Stuband/Permikomnas Jateng/VII/2026`.
+   - **Teks literal** di template (mis. `Permikomnas Jawa Tengah`) tetap statis per kategori.
+   - Contoh kategori `SPm-i` + template `{number:3}/{code}/{unit}/Permikomnas Jawa Tengah/{month_roman}/{year}` → `001/SPm-i/PAN-Stuband/Permikomnas Jawa Tengah/VII/2026`.
    - Override manual `letter_code` diizinkan; counter tetap increment.
 4. Simpan letter + `variable_values` (JSON) — dipakai untuk nomor dan merge `.docx`.
 5. Merge `.docx` → upload MinIO → `document_url`.
@@ -397,7 +409,7 @@ if user lacks "events.view_all" AND settings.allow_cross_division_events_view ==
 ### 6.7 Organization Settings Singleton
 Service enforce max 1 row.
 
-**Kustomisasi tampilan** (kolom `appearance`, TEXT berisi JSON): parameter `style` (preset vega/nova/mala/lyra/mira/luma/sera/rhea — kurasi sendiri, bukan token registry premium shadcn), `base` (neutral/stone/zinc/gray/slate), `primary` (11 warna, termasuk `indigo`), `chart` (5 palet), `heading_font`/`text_font` (6 font Google via next/font, variabel `--font-*` di root layout), `radius` (rem). Frontend `lib/appearance.ts` menerjemahkan config → CSS variables `:root` yang di-inject sebagai `<style id="app-appearance">` (menimpa default base-mira di `globals.css`); `AppearanceSync` menerapkannya saat load, panel di `/admin/settings` menerapkan draft secara live sebelum disimpan lewat `PUT /settings` (field form `json`). `appearance` kosong/invalid → fallback tampilan bawaan.
+**Kustomisasi tampilan** (kolom `appearance`, TEXT berisi JSON): parameter `style` (preset vega/nova/mala/lyra/mira/luma/sera/rhea — kurasi sendiri, bukan token registry premium shadcn), `base` (neutral/stone/zinc/gray/slate), `primary` (12 warna, bawaan `permi` = biru dari logo), `chart` (5 palet), `heading_font`/`text_font` (6 font Google via next/font, variabel `--font-*` di root layout), `radius` (rem). Frontend `lib/appearance.ts` menerjemahkan config → CSS variables `:root` yang di-inject sebagai `<style id="app-appearance">` (menimpa default base-mira di `globals.css`); `AppearanceSync` menerapkannya saat load, panel di `/admin/settings` menerapkan draft secara live sebelum disimpan lewat `PUT /settings` (field form `json`). `appearance` kosong/invalid → fallback tampilan bawaan.
 
 ### 6.8 User Import
 Parse CSV/XLSX → validasi → bulk insert → email async.
@@ -518,7 +530,9 @@ backups/{date}-{id}.zip
 | Transaksi kritis | `*sql.Tx` + FOR UPDATE sampai WithTx patched |
 | ORM access | `orm.*` + request context; larang `models.*` scaffold |
 | Event tanpa waktu selesai | `end_time` = penghujung hari `start_time` (zona start); diisi UI, backend hanya fallback |
-| Aksen aplikasi | Indigo korporat `oklch(0.45 0.13 264)` (`--primary`); palet divisi dijaga berjarak oklab >= 0.16 dari aksen |
+| Aksen aplikasi | Biru Permikomnas `oklch(0.43 0.16 250)` (`--primary`, hue diambil dari logo wilayah) dengan latar putih `oklch(1 0 0)`; palet divisi dijaga berjarak oklab >= 0.16 dari aksen |
+| Identitas | Nama bawaan **Permikomnas Jawa Tengah** (`lib/brand.ts`, dipakai kalau `web_name` kosong). Logo `frontend/public/assets/logo-permikomnas.png` (512px, hasil perkecil dari master 3820px) + `app/icon.png`, `app/favicon.ico`, `app/apple-icon.png`. Admin bisa menimpanya lewat `/admin/settings` (`logo_url` menang atas logo bawaan) |
+| Status modul | **Keuangan dan absensi mandiri dimatikan sementara** lewat `frontend/lib/features.ts` (keuangan: menu, halaman `/admin/finance`, kartu saldo dasbor, fetch dashboard; absensi: tombol "Absen sekarang" + halaman `/events/:id/attendance`). Endpoint API, tabel, dan data tetap utuh supaya gampang dinyalakan lagi. Fokus sementara: **event, kalender, dan perizinan** (izin punya alur lengkap: ajukan → setujui/tolak + catatan → ajukan ulang bila ditolak). Penundaan lain dicatat di [`PONYTAIL-DEBT.md`](PONYTAIL-DEBT.md) |
 | Kategori izin | Master data `permission_category` + menu admin; pengajuan wajib memilih kategori |
 | Batas ajukan izin | 3 jam sebelum event mulai (server + UI memakai aturan yang sama) |
 | Approval izin | Dua tingkat: `attendance.approve` (semua event) vs `attendance.approve_own` (event yang dikelola sendiri, otomatis untuk pemegang `events.create`) |
