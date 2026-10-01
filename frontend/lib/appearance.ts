@@ -21,6 +21,7 @@ export type BaseKey = "neutral" | "stone" | "zinc" | "gray" | "slate"
 
 export type PrimaryKey =
   | "mono"
+  | "permi"
   | "indigo"
   | "cyan"
   | "blue"
@@ -55,7 +56,7 @@ export interface AppearanceConfig {
 export const DEFAULT_APPEARANCE: AppearanceConfig = {
   style: "mira",
   base: "neutral",
-  primary: "indigo",
+  primary: "permi",
   chart: "primary",
   headingFont: "inter",
   textFont: "inter",
@@ -113,6 +114,13 @@ export const PRIMARY_COLORS: Record<PrimaryKey, PrimaryColor> = {
     label: "Mono",
     light: { l: 0.205, c: 0, h: 0 },
     fg: "oklch(0.985 0 0)",
+  },
+  // Biru resmi Permikomnas Jawa Tengah, hue diambil dari biru pada logo wilayah
+  // dan digelapkan agar kontras teks putih lolos APCA.
+  permi: {
+    label: "Permikomnas",
+    light: { l: 0.43, c: 0.16, h: 250 },
+    fg: "oklch(0.985 0.005 250)",
   },
   indigo: {
     label: "Indigo",
@@ -228,7 +236,7 @@ export const STYLE_PRESETS: Record<
     label: "Mira",
     config: {
       base: "neutral",
-      primary: "indigo",
+      primary: "permi",
       chart: "primary",
       headingFont: "inter",
       textFont: "inter",

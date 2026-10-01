@@ -77,27 +77,28 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  /* Aksen indigo korporat — sengaja jauh dari 6 warna divisi (jarak oklab
-     >= 0.16) supaya chip kalender tidak tertukar dengan warna aksi. */
-  --primary: oklch(0.45 0.13 264);
-  --primary-foreground: oklch(0.985 0.005 264);
-  --secondary: oklch(0.967 0.002 264);
-  --secondary-foreground: oklch(0.21 0.006 264);
+  /* Aksen biru Permikomnas — hue diambil dari biru pada logo wilayah.
+     Sengaja digelapkan (L 0.43) supaya jarak oklab ke tiap warna divisi
+     tetap >= 0.16, jadi chip kalender tidak tertukar dengan warna aksi. */
+  --primary: oklch(0.43 0.16 250);
+  --primary-foreground: oklch(0.985 0.005 250);
+  --secondary: oklch(0.967 0.003 250);
+  --secondary-foreground: oklch(0.21 0.008 250);
   --muted: oklch(0.97 0 0);
   /* 0.53 (bukan 0.556 bawaan) agar teks sekunder 12–14px lolos APCA Lc >= 75. */
   --muted-foreground: oklch(0.53 0 0);
-  --accent: oklch(0.97 0.004 264);
-  --accent-foreground: oklch(0.205 0.01 264);
+  --accent: oklch(0.962 0.014 250);
+  --accent-foreground: oklch(0.205 0.03 250);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.55 0.10 264);
+  --ring: oklch(0.55 0.12 250);
   /* Ramp chart: 5 langkah satu hue aksen, semua >= 3:1 terhadap putih. */
-  --chart-1: oklch(0.66 0.09 264);
-  --chart-2: oklch(0.6 0.12 264);
-  --chart-3: oklch(0.53 0.14 264);
-  --chart-4: oklch(0.45 0.13 264);
-  --chart-5: oklch(0.38 0.11 264);
+  --chart-1: oklch(0.66 0.10 250);
+  --chart-2: oklch(0.6 0.13 250);
+  --chart-3: oklch(0.53 0.15 250);
+  --chart-4: oklch(0.43 0.16 250);
+  --chart-5: oklch(0.36 0.12 250);
   /* Warna chip kalender per divisi — dipakai lewat var(--chip-color). Admin
      memilih salah satunya di menu Divisi (kolom `division.color`); kosong =
      dibagi otomatis dari daftar divisi. 8 token ini dipilih dengan sebaran
@@ -113,12 +114,12 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.45 0.13 264);
-  --sidebar-primary-foreground: oklch(0.985 0.005 264);
-  --sidebar-accent: oklch(0.97 0.004 264);
-  --sidebar-accent-foreground: oklch(0.205 0.01 264);
+  --sidebar-primary: oklch(0.43 0.16 250);
+  --sidebar-primary-foreground: oklch(0.985 0.005 250);
+  --sidebar-accent: oklch(0.962 0.014 250);
+  --sidebar-accent-foreground: oklch(0.205 0.03 250);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.55 0.10 264);
+  --sidebar-ring: oklch(0.55 0.12 250);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
 }
