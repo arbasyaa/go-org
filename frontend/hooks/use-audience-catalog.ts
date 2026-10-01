@@ -28,13 +28,24 @@ export function useAudienceCatalog() {
     [query.data]
   )
   const memberCount = query.data?.member_count ?? null
-  const counts = useMemo(() => {
-    const map = new Map<number, number>()
-    for (const item of query.data?.divisions ?? [])
-      map.set(item.id, item.member_count)
-    for (const item of query.data?.roles ?? []) map.set(item.id, item.member_count)
-    return map
-  }, [query.data])
+  // Divisi dan role punya ruang ID sendiri-sendiri, jadi tidak boleh satu map:
+  // id 4 di divisi dan id 4 di role adalah dua entitas berbeda, dan map bersama
+  // membuat angka salah satu menimpa yang lain (mis. PR tampil 0 = jumlah Staff).
+  const divisionCounts = useMemo(
+    () => new Map((query.data?.divisions ?? []).map((d) => [d.id, d.member_count])),
+    [query.data]
+  )
+  const roleCounts = useMemo(
+    () => new Map((query.data?.roles ?? []).map((r) => [r.id, r.member_count])),
+    [query.data]
+  )
 
-  return { divisions, roles, memberCount, counts, loading: query.loading }
+  return {
+    divisions,
+    roles,
+    memberCount,
+    divisionCounts,
+    roleCounts,
+    loading: query.loading,
+  }
 }

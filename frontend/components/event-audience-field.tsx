@@ -16,8 +16,10 @@ type Props = {
   onChange: (value: EventAudienceValue) => void
   divisions: Division[]
   roles: Role[]
-  /** Jumlah anggota per divisi/role — membantu admin menimbang pilihan. */
-  counts?: Map<number, number>
+  /** Jumlah anggota per divisi — membantu admin menimbang pilihan. */
+  divisionCounts?: Map<number, number>
+  /** Jumlah anggota per role — map terpisah karena ID role bukan ID divisi. */
+  roleCounts?: Map<number, number>
   /** Jumlah anggota aktif, untuk label tombol "Semua Divisi". */
   activeMemberCount?: number | null
 }
@@ -46,14 +48,13 @@ export function EventAudienceField({
   onChange,
   divisions,
   roles,
-  counts,
+  divisionCounts,
+  roleCounts,
   activeMemberCount,
 }: Props) {
   const custom = value.audience === "custom"
-  const withCount = (name: string, id: number) => {
-    const count = counts?.get(id)
-    return count != null ? `${name} (${count})` : name
-  }
+  const withCount = (name: string, count: number | undefined) =>
+    count != null ? `${name} (${count})` : name
 
   return (
     <Field className="gap-3 rounded-lg border p-3">
@@ -108,7 +109,7 @@ export function EventAudienceField({
                       })
                     }
                   />
-                  {withCount(d.name, d.id)}
+                  {withCount(d.name, divisionCounts?.get(d.id))}
                 </label>
               ))
             )}
@@ -129,7 +130,7 @@ export function EventAudienceField({
                       })
                     }
                   />
-                  {withCount(r.name, r.id)}
+                  {withCount(r.name, roleCounts?.get(r.id))}
                 </label>
               ))
             )}

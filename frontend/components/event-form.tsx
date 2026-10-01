@@ -167,7 +167,8 @@ export function EventForm({
                   onChange={setAudience}
                   divisions={catalog.divisions}
                   roles={catalog.roles}
-                  counts={catalog.counts}
+                  divisionCounts={catalog.divisionCounts}
+                  roleCounts={catalog.roleCounts}
                   activeMemberCount={catalog.memberCount}
                 />
 

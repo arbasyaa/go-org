@@ -348,7 +348,8 @@ export default function AdminEventsPage() {
             onChange={setAudience}
             divisions={catalog.divisions}
             roles={catalog.roles}
-            counts={catalog.counts}
+            divisionCounts={catalog.divisionCounts}
+            roleCounts={catalog.roleCounts}
             activeMemberCount={catalog.memberCount}
           />
           <Field className="flex flex-row items-center justify-between gap-3">
