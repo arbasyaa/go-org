@@ -144,6 +144,24 @@ Kelas bug yang sudah pernah terjadi — jangan diulang:
 | Setiap halaman punya tepat satu `<h1>` | `PageHeader` menyediakannya sebagai `sr-only` karena judul visualnya berupa breadcrumb (`span`). Tanpa ini dokumen tak punya heading/landmark (WCAG 1.3.1). |
 | `getRowId` tabel harus menunjuk field yang benar-benar ada | Baris rekap absensi tidak punya `id` (gabungan roster + absensi) → semuanya menjadi `"undefined"` dan React melempar peringatan duplicate key. Pakai `user_id`. |
 
+### 1.4 Deployment production (Dokploy)
+
+Satu stack, satu domain: **`permikomnasjateng.teknostudio.id`**.
+
+| | Nilai |
+|---|---|
+| Compose | `docker-compose.prod.yml` (root). `backend/docker-compose.prod.yml` hanya varian backend-only. |
+| Env | root `.env.example` → `.env` (Dokploy: tab Environment). Satu file untuk backend + frontend. |
+| Domain Dokploy | service **`frontend`**, container port **3000**, HTTPS on |
+| Port | semua service hanya `expose:`, **tidak ada** `ports:` ke host — Traefik Dokploy yang masuk |
+
+- Browser memakai **proxy same-origin** `/api/backend` → `gokil:8080`. Karena itu tidak ada CORS dan `COOKIE_DOMAIN` dibiarkan kosong. Mode direct-API (`NEXT_PUBLIC_API_URL` + `NEXT_PUBLIC_USE_DIRECT_API=1`) hanya untuk setup API di domain terpisah.
+- `API_INTERNAL_URL` **di-bake saat build**: `rewrites()` di `next.config.ts` di-resolve waktu build (terbukti di `.next/routes-manifest.json`), jadi Dockerfile menerimanya sebagai `ARG` dan compose mengirimnya sebagai build arg. Nilai `127.0.0.1:8080` membuat proxy mati di dalam container.
+- `GOKIL_HOST=0.0.0.0` wajib (bukan `127.0.0.1`) — kalau tidak, container frontend tidak bisa menjangkau backend.
+- `GOKIL_DB_DSN` **tidak** ditulis di env; compose merakitnya dari `GOKIL_DB_USER`/`GOKIL_DB_PASSWORD`/`GOKIL_DB_NAME` supaya password cuma ada di satu tempat.
+- Upload lokal (`GOKIL_STORAGE_LOCAL_PATH=/app/storage`) harus selalu punya volume `gokil_storage`, kalau tidak semua file hilang tiap redeploy. Detail: `STORAGE_PERSISTENCE.md`.
+- Dokploy menempelkan `dokploy-network` sendiri ke service yang diberi domain, jadi network itu tidak dideklarasikan di compose.
+
 ## 2. Domain Model → Entity Mapping
 
 Setiap tabel di PRD §4 dipetakan ke model Go yang embed `orm.BaseModel` (`ID int64`, `CreatedAt`, `UpdatedAt`). Urutan implementasi mengikuti dependency.

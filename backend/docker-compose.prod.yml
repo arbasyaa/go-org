@@ -17,6 +17,8 @@ services:
         condition: service_healthy
     environment:
       OCR_SERVICE_URL: http://ocr:8090
+    expose:
+      - "8080"
     volumes:
       - gokil_storage:/app/storage
     restart: unless-stopped

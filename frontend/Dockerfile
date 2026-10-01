@@ -20,8 +20,12 @@ COPY . .
 
 ARG NEXT_PUBLIC_API_URL=""
 ARG NEXT_PUBLIC_USE_DIRECT_API=""
+# Rewrites di next.config.ts di-resolve saat build, jadi nilai ini ikut di-bake
+# ke routes-manifest.json — bukan dibaca ulang saat container jalan.
+ARG API_INTERNAL_URL="http://127.0.0.1:8080"
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_USE_DIRECT_API=${NEXT_PUBLIC_USE_DIRECT_API}
+ENV API_INTERNAL_URL=${API_INTERNAL_URL}
 
 RUN pnpm build
 

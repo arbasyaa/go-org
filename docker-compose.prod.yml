@@ -1,33 +1,56 @@
 # =============================================================================
-# MyOrg Production Stack
+# MyOrg — stack PRODUCTION (Dokploy)
 # =============================================================================
-# Usage:
-#   cp backend/.env.prod.example backend/.env.prod   # fill in real values
-#   cp frontend/.env.prod.example frontend/.env.prod  # fill in real values
-#   docker compose -f docker-compose.prod.yml up -d --build
+# Setelan di Dokploy (Compose app):
+#   Compose Path     : docker-compose.prod.yml
+#   Environment      : tempel isi .env.example, isi yang kosong
+#   Domains          : Host permikomnasjateng.teknostudio.id
+#                      Service `frontend`, Container Port 3000, HTTPS on
 #
-# All services communicate via Docker internal network.
-# No ports are exposed to the host — route traffic via reverse proxy.
+# Port EXPOSE, bukan port publish. Tidak ada satu pun service yang bind ke host,
+# jadi tidak ada rebutan port dengan aplikasi lain di server yang sama. Yang
+# menembus `frontend:3000` adalah Traefik milik Dokploy.
+# Dokploy menempelkan `dokploy-network` sendiri ke service yang diberi domain,
+# makanya di sini tidak dideklarasikan: stack tetap jalan apa adanya kalau
+# dijalankan tanpa Dokploy.
+#
+# Lokal: cp .env.example .env && docker compose -f docker-compose.prod.yml up -d --build
 # =============================================================================
 
 services:
 
-  # ── Frontend (Next.js) ────────────────────────────────────────────────────
+  # ── Frontend (Next.js) — satu-satunya service yang dapat domain ────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-        NEXT_PUBLIC_USE_DIRECT_API: ${NEXT_PUBLIC_USE_DIRECT_API}
-    env_file:
-      - .env
+        # next.config.ts me-resolve rewrites saat build, jadi API_INTERNAL_URL
+        # harus ikut sebagai build arg. Tanpa ini proxy /api/backend di-bake
+        # menunjuk 127.0.0.1:8080 di dalam container frontend dan API mati.
+        API_INTERNAL_URL: http://gokil:8080
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_USE_DIRECT_API: ${NEXT_PUBLIC_USE_DIRECT_API:-}
     environment:
-      API_INTERNAL_URL: ${API_INTERNAL_URL}
+      # Hanya ini yang dibutuhkan frontend saat jalan. Sengaja TIDAK pakai
+      # env_file: .env — tanpa itu JWT_SECRET dan password DB ikut nyangkut di
+      # container yang menghadap publik, padahal tidak dipakai sama sekali.
+      API_INTERNAL_URL: http://gokil:8080
     expose:
       - "3000"
     depends_on:
-      - gokil
+      gokil:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch("http://127.0.0.1:3000/login").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
     networks:
       - internal
@@ -39,6 +62,10 @@ services:
       dockerfile: Dockerfile
       args:
         PROJECT: backend
+    environment:
+      # Satu-satunya tempat password DB hidup. Menimpa apa pun di .env.
+      GOKIL_DB_DSN: postgres://${GOKIL_DB_USER}:${GOKIL_DB_PASSWORD}@db:5432/${GOKIL_DB_NAME}?sslmode=disable
+      OCR_SERVICE_URL: http://ocr:8090
     env_file:
       - .env
     expose:
@@ -50,22 +77,23 @@ services:
         condition: service_healthy
       ocr:
         condition: service_healthy
-    environment:
-      OCR_SERVICE_URL: http://ocr:8090
     volumes:
-      # Tanpa volume ini, semua file upload (avatar, banner, lampiran, dsb.)
-      # hilang setiap kali container di-rebuild/redeploy.
+      # Tanpa volume ini semua upload (avatar, banner, lampiran, selfie absensi)
+      # hilang tiap kali container di-rebuild / redeploy.
       - gokil_storage:/app/storage
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
     networks:
       - internal
 
-  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  # ── PostgreSQL ────────────────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
-    restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${GOKIL_DB_USER}
       POSTGRES_PASSWORD: ${GOKIL_DB_PASSWORD}
@@ -77,13 +105,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
     networks:
       - internal
 
-  # ── Redis ──────────────────────────────────────────────────────────────────
+  # ── Redis ─────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis_data:/data
@@ -92,40 +120,45 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
     networks:
       - internal
 
-  # ── MinIO (S3-compatible object storage) ───────────────────────────────────
-  # minio:
-  #   image: minio/minio:latest
-  #   restart: unless-stopped
-  #   env_file:
-  #     - ./backend/.env.prod
-  #   environment:
-  #     MINIO_ROOT_USER: ${GOKIL_STORAGE_ACCESS_KEY_ID}
-  #     MINIO_ROOT_PASSWORD: ${GOKIL_STORAGE_SECRET_ACCESS_KEY}
-  #   command: server /data --console-address ":9001"
-  #   volumes:
-  #     - minio_data:/data
-  #   networks:
-  #     - internal
-
-  # ── OCR Service (PDF/image text extraction) ────────────────────────────────
+  # ── OCR (ekstraksi teks PDF/gambar) ───────────────────────────────────────
   ocr:
     build:
       context: ./backend/ocr
-    restart: unless-stopped
     environment:
       OCR_LANG: ${OCR_LANG:-ind+eng}
       OCR_PDF_DPI: ${OCR_PDF_DPI:-200}
+    expose:
+      - "8090"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health')"]
       interval: 10s
       timeout: 5s
       retries: 6
       start_period: 20s
+    restart: unless-stopped
     networks:
       - internal
+
+  # ── MinIO (opsional, hanya kalau GOKIL_STORAGE_PROVIDER=s3) ────────────────
+  # Butuh domain tambahan di Dokploy yang menunjuk service ini port 9000
+  # (Traefik) supaya GOKIL_STORAGE_BASE_URL bisa dibuka browser.
+  # minio:
+  #   image: minio/minio:latest
+  #   environment:
+  #     MINIO_ROOT_USER: ${GOKIL_STORAGE_ACCESS_KEY_ID}
+  #     MINIO_ROOT_PASSWORD: ${GOKIL_STORAGE_SECRET_ACCESS_KEY}
+  #   command: server /data --console-address ":9001"
+  #   expose:
+  #     - "9000"
+  #   volumes:
+  #     - minio_data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - internal
 
 volumes:
   db_data:
