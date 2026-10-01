@@ -159,7 +159,8 @@ Satu stack, satu domain: **`permikomnasjateng.teknostudio.id`**.
 - `API_INTERNAL_URL` **di-bake saat build**: `rewrites()` di `next.config.ts` di-resolve waktu build (terbukti di `.next/routes-manifest.json`), jadi Dockerfile menerimanya sebagai `ARG` dan compose mengirimnya sebagai build arg. Nilai `127.0.0.1:8080` membuat proxy mati di dalam container.
 - `GOKIL_HOST=0.0.0.0` wajib (bukan `127.0.0.1`) — kalau tidak, container frontend tidak bisa menjangkau backend.
 - `GOKIL_DB_DSN` **tidak** ditulis di env; compose merakitnya dari `GOKIL_DB_USER`/`GOKIL_DB_PASSWORD`/`GOKIL_DB_NAME` supaya password cuma ada di satu tempat.
-- Upload lokal (`GOKIL_STORAGE_LOCAL_PATH=/app/storage`) harus selalu punya volume `gokil_storage`, kalau tidak semua file hilang tiap redeploy. Detail: `STORAGE_PERSISTENCE.md`.
+- Upload lokal (`GOKIL_STORAGE_LOCAL_PATH=/app/storage`) harus selalu punya volume `permikomnasjateng_gokil_storage`, kalau tidak semua file hilang tiap redeploy. Detail: `STORAGE_PERSISTENCE.md`.
+- Nama volume di-*pin* eksplisit (`name: permikomnasjateng_*`). Tanpa itu Docker mem-prefix nama project — di Dokploy nilainya `appName`, jadi volume berpindah nama begitu app di-rename atau stack dibuat ulang, dan container diam-diam memakai volume kosong (data terlihat hilang padahal masih ada).
 - Dokploy menempelkan `dokploy-network` sendiri ke service yang diberi domain, jadi network itu tidak dideklarasikan di compose.
 
 ## 2. Domain Model → Entity Mapping

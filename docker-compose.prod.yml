@@ -161,10 +161,17 @@ services:
   #     - internal
 
 volumes:
+  # Nama eksplisit: tanpa ini Docker mem- prefix nama project (di Dokploy =
+  # appName), jadi volume ikut berubah kalau app-nya di-rename dan data lama
+  # "hilang" di balik volume baru yang kosong.
   db_data:
+    name: permikomnasjateng_db_data
   redis_data:
+    name: permikomnasjateng_redis_data
   gokil_storage:
+    name: permikomnasjateng_gokil_storage
   # minio_data:
+  #   name: permikomnasjateng_minio_data
 
 networks:
   internal:
