@@ -16,7 +16,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "violations.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var userID int64
 		if q := c.Query("user_id"); q != "" {
@@ -38,7 +38,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "violations.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var body struct {
 			UserID        int64  `json:"user_id"`
@@ -56,8 +56,8 @@ func POST(ctx *views.Context) error {
 			issued = time.Now()
 		}
 		v, err := services.ViolationService{}.Create(c.Request.Context(), &models.Violation{
-			UserID: body.UserID, ViolationType: body.ViolationType, Description: body.Description,
-			SPLevel: body.SPLevel, DocumentURL: body.DocumentURL, IssuedByID: user.ID, IssuedDate: issued,
+			UserID: &body.UserID, ViolationType: body.ViolationType, Description: body.Description,
+			SPLevel: body.SPLevel, DocumentURL: body.DocumentURL, IssuedByID: &user.ID, IssuedDate: issued,
 		})
 		if err != nil {
 			return c.Error(500, err.Error())

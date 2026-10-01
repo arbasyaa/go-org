@@ -32,7 +32,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "announcement.create")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 
 		var title, content, targetType string
@@ -90,7 +90,7 @@ func POST(ctx *views.Context) error {
 		a, err := services.AnnouncementService{}.Create(c.Request.Context(), &models.Announcement{
 			Title: title, Content: content, BannerURL: bannerURL,
 			TargetType: targetType, TargetDivisionID: targetDivisionID,
-			PublishDate: time.Now(), CreatedByID: user.ID,
+			PublishDate: time.Now(), CreatedByID: &user.ID,
 		})
 		if err != nil {
 			return c.Error(500, err.Error())

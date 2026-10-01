@@ -408,7 +408,7 @@ export function LettersTablePage({ letterType }: LettersTablePageProps) {
 
   async function handleExport() {
     const token = getStoredToken()
-    const url = `${getApiBase()}/letters/export?type=${letterType}&format=csv`
+    const url = `${getApiBase()}/letters?export=csv&type=${letterType}`
     const res = await fetch(url, {
       credentials: "include",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -476,7 +476,9 @@ export function LettersTablePage({ letterType }: LettersTablePageProps) {
                 size="sm"
                 render={
                   <a
-                    href={`${getApiBase()}/letters/${letter.id}/download`}
+                    // Path proxy relatif, bukan getApiBase(): nilainya beda di
+                    // server dan browser sehingga hidrasi tidak cocok.
+                    href={`/api/backend/letters/${letter.id}/download`}
                     target="_blank"
                     rel="noreferrer"
                   />

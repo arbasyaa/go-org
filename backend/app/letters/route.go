@@ -1,8 +1,10 @@
 package letters
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"io"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,7 +22,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "letters.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var categoryID int64
 		if q := c.Query("category_id"); q != "" {
@@ -29,6 +31,23 @@ func GET(ctx *views.Context) error {
 		list, err := services.LetterService{}.List(c.Request.Context(), c.Query("type"), categoryID)
 		if err != nil {
 			return c.Error(500, err.Error())
+		}
+		// Ekspor CSV memakai query yang sama dengan daftar. Dulu ini route
+		// terpisah /letters/export, tapi router linear mendaftarkan /letters/:id
+		// lebih dulu sehingga "export" terbaca sebagai id (selalu 400).
+		if c.Query("export") != "" {
+			c.Writer.Header().Set("Content-Type", "text/csv")
+			c.Writer.Header().Set("Content-Disposition", `attachment; filename="letters.csv"`)
+			w := csv.NewWriter(c.Writer)
+			_ = w.Write([]string{"id", "type", "letter_code", "subject", "sender", "recipient", "letter_date"})
+			for _, l := range list {
+				_ = w.Write([]string{
+					strconv.FormatInt(l.ID, 10), l.Type, l.LetterCode, l.Subject,
+					l.Sender, l.Recipient, l.LetterDate.Format("2006-01-02"),
+				})
+			}
+			w.Flush()
+			return nil
 		}
 		return c.Success(200, "letters", list)
 	})(ctx)
@@ -39,7 +58,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "letters.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 
 		var (

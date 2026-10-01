@@ -39,7 +39,6 @@ import (
 	app_letters_id "backend/app/letters/_id"
 	app_letters_id_download "backend/app/letters/_id/download"
 	app_letters_bulk_delete "backend/app/letters/bulk_delete"
-	app_letters_export "backend/app/letters/export"
 	app_letters_parse_incoming "backend/app/letters/parse_incoming"
 	app_me "backend/app/me"
 	app_me_avatar "backend/app/me/avatar"
@@ -139,7 +138,6 @@ func init() {
 	framework.RegisterRoute("DELETE", "/letters/:id", app_letters_id.DELETE)
 	framework.RegisterRoute("GET", "/letters/:id/download", app_letters_id_download.GET)
 	framework.RegisterRoute("POST", "/letters/bulk_delete", app_letters_bulk_delete.POST)
-	framework.RegisterRoute("GET", "/letters/export", app_letters_export.GET)
 	framework.RegisterRoute("POST", "/letters/parse_incoming", app_letters_parse_incoming.POST)
 	framework.RegisterRoute("GET", "/me", app_me.GET)
 	framework.RegisterRoute("PUT", "/me", app_me.PUT)

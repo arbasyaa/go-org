@@ -22,7 +22,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		okView, _ := permission.UserHas(c, user, "events.view")
 		if !okView {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		canViewAll, _ := permission.UserHas(c, user, "events.view_all")
 		list, err := services.EventService{}.ListVisible(c.Request.Context(), user, canViewAll)
@@ -42,7 +42,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "events.create")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var (
 			title           string
@@ -142,7 +142,7 @@ func POST(ctx *views.Context) error {
 			Title: title, Description: description, DivisionID: divisionID,
 			Location: location, LinkURL: linkURL, BannerURL: bannerURL,
 			StartTime: start, EndTime: end, Audience: audienceName,
-			AllowPermission: allowPermission, CreatedByID: user.ID,
+			AllowPermission: allowPermission, CreatedByID: &user.ID,
 		}, targetDivisions, targetRoles)
 		if err != nil {
 			return c.Error(400, err.Error())

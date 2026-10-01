@@ -106,3 +106,22 @@ func TestDedupe(t *testing.T) {
 		t.Fatalf("got %v want [3 5]", got)
 	}
 }
+
+// Kolom created_by_id bisa NULL setelah pembuatnya dihapus (FK SET NULL).
+// Record tanpa pembuat bukan milik siapa pun — jangan sampai cocok dengan
+// user.ID 0 atau memicu panic nil dereference.
+func TestOwnedByHandlesDeletedCreator(t *testing.T) {
+	id := int64(7)
+	if !ownedBy(&id, 7) {
+		t.Fatal("pembuat yang sama harus dianggap pemilik")
+	}
+	if ownedBy(&id, 8) {
+		t.Fatal("user lain bukan pemilik")
+	}
+	if ownedBy(nil, 0) {
+		t.Fatal("created_by_id NULL tidak boleh cocok dengan user.ID 0")
+	}
+	if ownedBy(nil, 7) {
+		t.Fatal("created_by_id NULL bukan milik siapa pun")
+	}
+}

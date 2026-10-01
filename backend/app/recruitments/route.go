@@ -16,7 +16,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "recruitment.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		list, err := services.RecruitmentService{}.List(c.Request.Context())
 		if err != nil {
@@ -31,7 +31,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "recruitment.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var body struct {
 			Title       string `json:"title"`
@@ -48,7 +48,7 @@ func POST(ctx *views.Context) error {
 		close, _ := time.Parse("2006-01-02", body.CloseDate)
 		r, err := services.RecruitmentService{}.Create(c.Request.Context(), &models.Recruitment{
 			Title: body.Title, Description: body.Description, Slug: body.Slug,
-			OpenDate: open, CloseDate: close, Status: body.Status, CreatedByID: user.ID,
+			OpenDate: open, CloseDate: close, Status: body.Status, CreatedByID: &user.ID,
 		})
 		if err != nil {
 			return c.Error(500, err.Error())

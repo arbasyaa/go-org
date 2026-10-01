@@ -22,7 +22,7 @@ func POST(ctx *views.Context) error {
 	}
 	sub, err := services.RecruitmentService{}.SubmitPublic(ctx.Request.Context(), ctx.Param("slug"), &models.RecruitmentSubmission{
 		Name: body.Name, NIM: body.NIM, DivisionInterestID: body.DivisionInterestID,
-		Contact: body.Contact, CustomAnswers: body.CustomAnswers,
+		Contact: body.Contact, CustomAnswers: models.JSONField(body.CustomAnswers),
 	})
 	if err != nil {
 		return ctx.Error(400, err.Error())

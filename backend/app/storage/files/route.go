@@ -18,7 +18,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "storage.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var folderID *int64
 		if v := c.Query("folder_id"); v != "" {
@@ -40,7 +40,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "storage.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		if err := c.ParseMultipart(50 << 20); err != nil {
 			return c.Error(400, err.Error())
@@ -76,7 +76,7 @@ func POST(ctx *views.Context) error {
 			MimeType:    hdr.Header.Get("Content-Type"),
 			SizeBytes:   hdr.Size,
 			FolderID:    folderID,
-			CreatedByID: user.ID,
+			CreatedByID: &user.ID,
 		})
 		if err != nil {
 			return c.Error(500, err.Error())

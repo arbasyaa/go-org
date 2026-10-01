@@ -88,14 +88,14 @@ func (AuthService) Login(ctx context.Context, username, password string) (*Login
 	if err != nil {
 		u, err = orm.Objects[models.User](ctx).Filter("email", username).First()
 		if err != nil {
-			return nil, fmt.Errorf("invalid credentials")
+			return nil, fmt.Errorf("username atau password salah")
 		}
 	}
 	if u.Status != "active" {
-		return nil, fmt.Errorf("account inactive")
+		return nil, fmt.Errorf("akun tidak aktif, hubungi admin")
 	}
 	if !auth.CheckPassword(u.PasswordHash, password) {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, fmt.Errorf("username atau password salah")
 	}
 	token, err := auth.IssueToken(u.ID)
 	if err != nil {
@@ -134,7 +134,7 @@ func (AuthService) Register(ctx context.Context, username, email, password, full
 		return nil, err
 	}
 	if !settings.AllowSelfRegister {
-		return nil, fmt.Errorf("self registration disabled")
+		return nil, fmt.Errorf("pendaftaran mandiri dinonaktifkan")
 	}
 	hash, err := auth.HashPassword(password)
 	if err != nil {
@@ -142,7 +142,7 @@ func (AuthService) Register(ctx context.Context, username, email, password, full
 	}
 	roles, err := orm.Objects[models.Role](ctx).Filter("is_system", false).All()
 	if err != nil || len(roles) == 0 {
-		return nil, fmt.Errorf("no assignable role")
+		return nil, fmt.Errorf("tidak ada role yang bisa dipakai untuk pendaftaran")
 	}
 	roleID := roles[0].ID
 	for _, r := range roles {
@@ -307,12 +307,12 @@ func (UserService) ImportCSV(ctx context.Context, rows []map[string]string) (suc
 		divName := row["division"]
 		divs, _ := orm.Objects[models.Division](ctx).Filter("name", divName).All()
 		if len(divs) == 0 {
-			failures = append(failures, map[string]string{"row": row["username"], "error": "division not found"})
+			failures = append(failures, map[string]string{"row": row["username"], "error": "divisi tidak ditemukan"})
 			continue
 		}
 		roles, _ := orm.Objects[models.Role](ctx).Filter("name", row["role"]).All()
 		if len(roles) == 0 {
-			failures = append(failures, map[string]string{"row": row["username"], "error": "role not found"})
+			failures = append(failures, map[string]string{"row": row["username"], "error": "role tidak ditemukan"})
 			continue
 		}
 		pwd := row["password"]
@@ -861,7 +861,7 @@ func (AttendanceService) Submit(ctx context.Context, eventID, userID int64, self
 		return nil, err
 	}
 	if event.Status != "ongoing" {
-		return nil, fmt.Errorf("event is not ongoing")
+		return nil, fmt.Errorf("event sedang tidak berlangsung")
 	}
 	// Cakupan: hanya peserta event yang boleh tercatat, sekalipun tahu event_id.
 	participant, err := IsEventParticipant(ctx, eventID, userID)
@@ -874,7 +874,7 @@ func (AttendanceService) Submit(ctx context.Context, eventID, userID int64, self
 	existing, err := orm.Objects[models.Attendance](ctx).
 		Filter("event_id", eventID).Filter("user_id", userID).First()
 	if err == nil && existing != nil {
-		return nil, fmt.Errorf("already checked in")
+		return nil, fmt.Errorf("anda sudah tercatat absen di event ini")
 	}
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
@@ -891,11 +891,11 @@ func (AttendanceService) Submit(ctx context.Context, eventID, userID int64, self
 
 	selfieBytes, selfieCT, err := decodeUpload(selfieData)
 	if err != nil {
-		return nil, fmt.Errorf("invalid selfie: %w", err)
+		return nil, fmt.Errorf("selfie tidak valid: %w", err)
 	}
 	sigBytes, sigCT, err := decodeUpload(signatureData)
 	if err != nil {
-		return nil, fmt.Errorf("invalid signature: %w", err)
+		return nil, fmt.Errorf("tanda tangan tidak valid: %w", err)
 	}
 
 	selfieKey := storageutil.Key(fmt.Sprintf("attendance/selfies/%d", eventID), fmt.Sprintf("%d.jpg", userID))
@@ -1069,7 +1069,7 @@ func manageableEventIDs(ctx context.Context, user *auth.User) (map[int64]bool, e
 	}
 	ids := make(map[int64]bool, len(events))
 	for _, e := range events {
-		if e.CreatedByID == user.ID || (e.DivisionID != nil && divisionID != 0 && *e.DivisionID == divisionID) {
+		if ownedBy(e.CreatedByID, user.ID) || (e.DivisionID != nil && divisionID != 0 && *e.DivisionID == divisionID) {
 			ids[e.ID] = true
 		}
 	}
@@ -1236,7 +1236,7 @@ func (PermissionRequestService) Review(ctx context.Context, id int64, reviewer *
 			return err
 		}
 		if pr.Status != "pending" {
-			return fmt.Errorf("already reviewed")
+			return fmt.Errorf("pengajuan ini sudah direview")
 		}
 		now := time.Now()
 		status := "rejected"
@@ -1312,11 +1312,15 @@ func (ViolationService) ListDetailed(ctx context.Context, userID int64) ([]map[s
 		if err := json.Unmarshal(raw, &item); err != nil {
 			return nil, err
 		}
-		if u := summary(v.UserID); u != nil {
-			item["user"] = u
+		if v.UserID != nil {
+			if u := summary(*v.UserID); u != nil {
+				item["user"] = u
+			}
 		}
-		if ib := summary(v.IssuedByID); ib != nil {
-			item["issued_by"] = ib
+		if v.IssuedByID != nil {
+			if ib := summary(*v.IssuedByID); ib != nil {
+				item["issued_by"] = ib
+			}
 		}
 		out[i] = item
 	}
@@ -1358,7 +1362,7 @@ func (RecruitmentService) ListSubmissions(ctx context.Context, recruitmentID int
 func (RecruitmentService) SubmitPublic(ctx context.Context, slug string, sub *models.RecruitmentSubmission) (*models.RecruitmentSubmission, error) {
 	rec, err := RecruitmentService{}.GetBySlug(ctx, slug)
 	if err != nil {
-		return nil, fmt.Errorf("recruitment not open")
+		return nil, fmt.Errorf("pendaftaran belum dibuka atau sudah ditutup")
 	}
 	sub.RecruitmentID = rec.ID
 	sub.SubmittedAt = time.Now()
@@ -1426,7 +1430,7 @@ func (LetterService) CreateOutgoing(ctx context.Context, letter *models.Letter, 
 			letter.LetterCode = code
 		}
 		letter.Type = "outgoing"
-		letter.CreatedByID = createdBy
+		letter.CreatedByID = &createdBy
 		if letter.Subject != "" {
 			vals["PERIHAL"] = letter.Subject
 			vals["SUBJECT"] = letter.Subject
@@ -1495,7 +1499,7 @@ func (LetterService) CreateIncoming(ctx context.Context, letter *models.Letter, 
 		}
 	}
 	letter.Type = "incoming"
-	letter.CreatedByID = createdBy
+	letter.CreatedByID = &createdBy
 	if len(letter.VariableValues) == 0 {
 		letter.VariableValues = models.JSONField("{}")
 	}
@@ -1783,7 +1787,7 @@ func (ProfileService) Update(ctx context.Context, userID int64, values map[strin
 		} else {
 			t, err := timeutil.ParseFlexible(s)
 			if err != nil {
-				return nil, fmt.Errorf("invalid birth_date")
+				return nil, fmt.Errorf("tanggal lahir tidak valid")
 			}
 			clean["birth_date"] = t
 		}
@@ -1800,7 +1804,7 @@ func (ProfileService) ChangePassword(ctx context.Context, userID int64, oldPwd, 
 		return err
 	}
 	if !auth.CheckPassword(u.PasswordHash, oldPwd) {
-		return fmt.Errorf("incorrect old password")
+		return fmt.Errorf("password lama salah")
 	}
 	return UserService{}.ChangePassword(ctx, userID, newPwd)
 }
@@ -1996,14 +2000,16 @@ func (ActivityLogService) List(ctx context.Context, userID int64, resourceType s
 	out := make([]map[string]any, 0, len(logs))
 	for _, l := range logs {
 		uname := ""
-		if uid, ok := userCache[l.UserID]; ok {
-			uname = uid
-		} else if u, err := orm.GetByID[models.User](ctx, l.UserID); err == nil {
-			uname = u.FullName
-			if uname == "" {
-				uname = u.Username
+		if l.UserID != nil {
+			if cached, ok := userCache[*l.UserID]; ok {
+				uname = cached
+			} else if u, err := orm.GetByID[models.User](ctx, *l.UserID); err == nil {
+				uname = u.FullName
+				if uname == "" {
+					uname = u.Username
+				}
+				userCache[*l.UserID] = uname
 			}
-			userCache[l.UserID] = uname
 		}
 		out = append(out, map[string]any{
 			"id":            l.ID,
@@ -2022,7 +2028,7 @@ func (ActivityLogService) List(ctx context.Context, userID int64, resourceType s
 
 func LogActivity(ctx context.Context, userID int64, action, resourceType string, resourceID int64, description string, ip string) {
 	orm.Create(ctx, &models.ActivityLog{
-		UserID:       userID,
+		UserID:       &userID,
 		Action:       action,
 		ResourceType: resourceType,
 		ResourceID:   resourceID,

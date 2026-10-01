@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/lrndwy/gokil/orm"
@@ -119,7 +118,7 @@ type Event struct {
 	Audience    string              `orm:"size:20;default:custom" json:"audience"`
 	Status      string              `orm:"size:20;default:upcoming" json:"status"`
 	CreatedBy   orm.BelongsTo[User] `json:"-"`
-	CreatedByID int64               `orm:"index" json:"created_by_id"`
+	CreatedByID *int64              `orm:"null;index" json:"created_by_id"`
 }
 
 // PermissionCategory: master data kategori pengajuan izin (mis. Sakit, Izin).
@@ -162,20 +161,20 @@ type Attendance struct {
 
 type PermissionRequest struct {
 	orm.BaseModel
-	Event        orm.BelongsTo[Event] `orm:"required" json:"-"`
-	EventID      int64                `orm:"index" json:"event_id"`
-	User         orm.BelongsTo[User]  `orm:"required" json:"-"`
-	UserID       int64                `orm:"index" json:"user_id"`
+	Event   orm.BelongsTo[Event] `orm:"required" json:"-"`
+	EventID int64                `orm:"index" json:"event_id"`
+	User    orm.BelongsTo[User]  `orm:"required" json:"-"`
+	UserID  int64                `orm:"index" json:"user_id"`
 	// Category = master data kategori izin (mis. Sakit, Izin).
 	Category     orm.BelongsTo[PermissionCategory] `json:"-"`
-	CategoryID   int64                              `orm:"index" json:"category_id"`
-	Reason       string               `orm:"text" json:"reason"`
-	ProofURL     string               `orm:"size:255" json:"proof_url"`
-	Status       string               `orm:"size:20;default:pending" json:"status"`
-	ReviewedBy   orm.BelongsTo[User]  `json:"-"`
-	ReviewedByID *int64               `orm:"null" json:"reviewed_by_id,omitempty"`
-	ReviewNote   string               `orm:"text" json:"review_note"`
-	ReviewedAt   *time.Time           `orm:"null" json:"reviewed_at,omitempty"`
+	CategoryID   int64                             `orm:"index" json:"category_id"`
+	Reason       string                            `orm:"text" json:"reason"`
+	ProofURL     string                            `orm:"size:255" json:"proof_url"`
+	Status       string                            `orm:"size:20;default:pending" json:"status"`
+	ReviewedBy   orm.BelongsTo[User]               `json:"-"`
+	ReviewedByID *int64                            `orm:"null" json:"reviewed_by_id,omitempty"`
+	ReviewNote   string                            `orm:"text" json:"review_note"`
+	ReviewedAt   *time.Time                        `orm:"null" json:"reviewed_at,omitempty"`
 }
 
 type ViolationType struct {
@@ -188,13 +187,13 @@ type ViolationType struct {
 type Violation struct {
 	orm.BaseModel
 	User          orm.BelongsTo[User] `orm:"required" json:"-"`
-	UserID        int64               `orm:"index" json:"user_id"`
+	UserID        *int64              `orm:"null;index" json:"user_id"`
 	ViolationType string              `orm:"size:100" json:"violation_type"`
 	Description   string              `orm:"text" json:"description"`
 	SPLevel       string              `orm:"size:20" json:"sp_level"`
 	DocumentURL   string              `orm:"size:255" json:"document_url"`
 	IssuedBy      orm.BelongsTo[User] `orm:"required" json:"-"`
-	IssuedByID    int64               `orm:"index" json:"issued_by_id"`
+	IssuedByID    *int64              `orm:"null;index" json:"issued_by_id"`
 	IssuedDate    time.Time           `json:"issued_date"`
 }
 
@@ -207,7 +206,7 @@ type Recruitment struct {
 	CloseDate   time.Time           `json:"close_date"`
 	Status      string              `orm:"size:20;default:draft" json:"status"`
 	CreatedBy   orm.BelongsTo[User] `json:"-"`
-	CreatedByID int64               `orm:"index" json:"created_by_id"`
+	CreatedByID *int64              `orm:"null;index" json:"created_by_id"`
 }
 
 type RecruitmentTargetDivision struct {
@@ -224,7 +223,7 @@ type RecruitmentCustomField struct {
 	RecruitmentID int64                      `orm:"index" json:"recruitment_id"`
 	FieldLabel    string                     `orm:"size:100" json:"field_label"`
 	FieldType     string                     `orm:"size:20" json:"field_type"`
-	FieldOptions  json.RawMessage            `orm:"type:json" json:"field_options,omitempty"`
+	FieldOptions  JSONField                  `orm:"type:json;null" json:"field_options,omitempty"`
 	IsRequired    bool                       `orm:"default:true" json:"is_required"`
 	OrderIndex    int                        `json:"order_index"`
 }
@@ -238,7 +237,7 @@ type RecruitmentSubmission struct {
 	DivisionInterest   orm.BelongsTo[Division]    `json:"-"`
 	DivisionInterestID int64                      `orm:"index" json:"division_interest_id"`
 	Contact            string                     `orm:"size:100" json:"contact"`
-	CustomAnswers      json.RawMessage            `orm:"type:json" json:"custom_answers,omitempty"`
+	CustomAnswers      JSONField                  `orm:"type:json;null" json:"custom_answers,omitempty"`
 	Status             string                     `orm:"size:20;default:submitted" json:"status"`
 	SubmittedAt        time.Time                  `json:"submitted_at"`
 }
@@ -275,7 +274,7 @@ type Letter struct {
 	DocumentURL    string                        `orm:"size:255" json:"document_url"`
 	VariableValues JSONField                     `orm:"type:json;null" json:"variable_values,omitempty"`
 	CreatedBy      orm.BelongsTo[User]           `json:"-"`
-	CreatedByID    int64                         `orm:"index" json:"created_by_id"`
+	CreatedByID    *int64                        `orm:"null;index" json:"created_by_id"`
 }
 
 type Announcement struct {
@@ -288,7 +287,7 @@ type Announcement struct {
 	TargetDivisionID *int64                  `orm:"null" json:"target_division_id"`
 	PublishDate      time.Time               `json:"publish_date"`
 	CreatedBy        orm.BelongsTo[User]     `json:"-"`
-	CreatedByID      int64                   `orm:"index" json:"created_by_id"`
+	CreatedByID      *int64                  `orm:"null;index" json:"created_by_id"`
 }
 
 type AnnouncementAttachment struct {
@@ -326,7 +325,7 @@ type FinanceTransaction struct {
 	ReceiptURL      string                         `orm:"size:255" json:"receipt_url"`
 	TransactionDate time.Time                      `json:"transaction_date"`
 	CreatedBy       orm.BelongsTo[User]            `json:"-"`
-	CreatedByID     int64                          `orm:"index" json:"created_by_id"`
+	CreatedByID     *int64                         `orm:"null;index" json:"created_by_id"`
 }
 
 type PushSubscription struct {
@@ -352,12 +351,12 @@ type StorageFile struct {
 	MimeType    string              `orm:"size:100" json:"mime_type"`
 	SizeBytes   int64               `json:"size_bytes"`
 	CreatedBy   orm.BelongsTo[User] `json:"-"`
-	CreatedByID int64               `orm:"index" json:"created_by_id"`
+	CreatedByID *int64              `orm:"null;index" json:"created_by_id"`
 }
 
 type ActivityLog struct {
 	orm.BaseModel
-	UserID       int64  `orm:"index" json:"user_id"`
+	UserID       *int64 `orm:"null;index" json:"user_id"`
 	Action       string `orm:"size:50" json:"action"`
 	ResourceType string `orm:"size:50" json:"resource_type"`
 	ResourceID   int64  `json:"resource_id"`

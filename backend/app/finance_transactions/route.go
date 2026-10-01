@@ -22,7 +22,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "finance.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		data, err := services.FinanceService{}.ListTransactionsWithCategories(c.Request.Context())
 		if err != nil {
@@ -37,7 +37,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "finance.create")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 
 		var categoryID int64
@@ -112,7 +112,7 @@ func POST(ctx *views.Context) error {
 		}
 		t, err := services.FinanceService{}.CreateTransaction(c.Request.Context(), &models.FinanceTransaction{
 			CategoryID: categoryID, WalletID: walletID, Type: txType, Amount: amount, Description: description,
-			ReceiptURL: receiptURL, TransactionDate: td, CreatedByID: user.ID,
+			ReceiptURL: receiptURL, TransactionDate: td, CreatedByID: &user.ID,
 		})
 		if err != nil {
 			return c.Error(500, err.Error())

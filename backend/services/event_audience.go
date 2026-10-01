@@ -15,7 +15,7 @@ import (
 
 // ErrForbidden menandai aksi yang ditolak aturan cakupan, bukan karena error
 // teknis. Route menerjemahkannya jadi 403 (bukan 500).
-var ErrForbidden = errors.New("forbidden")
+var ErrForbidden = errors.New("akses ditolak")
 
 // ErrNotFound dipakai service saat baris yang diminta tidak ada, supaya route
 // bisa mengembalikan 404 alih-alih membocorkan "sql: no rows in result set".
@@ -275,10 +275,12 @@ func (EventService) EventsWithAudience(ctx context.Context, events []*models.Eve
 				item["division"] = map[string]any{"id": *e.DivisionID, "name": name}
 			}
 		}
-		if divisionID := creatorDivisions[e.CreatedByID]; divisionID > 0 {
-			item["created_by_division_id"] = divisionID
-			if name, ok := divisionNames[divisionID]; ok {
-				item["created_by_division_name"] = name
+		if e.CreatedByID != nil {
+			if divisionID := creatorDivisions[*e.CreatedByID]; divisionID > 0 {
+				item["created_by_division_id"] = divisionID
+				if name, ok := divisionNames[divisionID]; ok {
+					item["created_by_division_name"] = name
+				}
 			}
 		}
 		out = append(out, item)
@@ -334,10 +336,16 @@ func userDivisionID(ctx context.Context, userID int64) (int64, error) {
 	return u.DivisionID, nil
 }
 
+// ownedBy mencocokkan kolom pembuat dengan user. Kolomnya bisa NULL kalau
+// pembuatnya sudah dihapus (FK ON DELETE SET NULL), dan itu bukan pemilik.
+func ownedBy(creator *int64, userID int64) bool {
+	return creator != nil && *creator == userID
+}
+
 // CanManageEvent menegakkan batas edit/hapus: pembuat sendiri, system admin,
 // atau pemegang role di divisi penyelenggara event.
 func CanManageEvent(ctx context.Context, e *models.Event, user *auth.User) (bool, error) {
-	if user.IsSystemAdmin || e.CreatedByID == user.ID {
+	if user.IsSystemAdmin || ownedBy(e.CreatedByID, user.ID) {
 		return true, nil
 	}
 	if e.DivisionID == nil {
