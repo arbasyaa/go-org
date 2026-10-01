@@ -80,7 +80,7 @@ services:
     volumes:
       # Tanpa volume ini semua upload (avatar, banner, lampiran, selfie absensi)
       # hilang tiap kali container di-rebuild / redeploy.
-      - gokil_storage:/app/storage
+      - gokil_storage_permi:/app/storage
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
       interval: 15s
@@ -99,7 +99,7 @@ services:
       POSTGRES_PASSWORD: ${GOKIL_DB_PASSWORD}
       POSTGRES_DB: ${GOKIL_DB_NAME}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data_permi:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${GOKIL_DB_USER} -d ${GOKIL_DB_NAME}"]
       interval: 5s
@@ -114,7 +114,7 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - redis_data:/data
+      - redis_data_permi:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -164,11 +164,11 @@ volumes:
   # Nama eksplisit: tanpa ini Docker mem- prefix nama project (di Dokploy =
   # appName), jadi volume ikut berubah kalau app-nya di-rename dan data lama
   # "hilang" di balik volume baru yang kosong.
-  db_data:
+  db_data_permi:
     name: permikomnasjateng_db_data
-  redis_data:
+  redis_data_permi:
     name: permikomnasjateng_redis_data
-  gokil_storage:
+  gokil_storage_permi:
     name: permikomnasjateng_gokil_storage
   # minio_data:
   #   name: permikomnasjateng_minio_data
