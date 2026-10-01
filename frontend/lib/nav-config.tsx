@@ -14,7 +14,6 @@ import {
   SettingsIcon,
   ShieldAlertIcon,
   ShieldIcon,
-  UserIcon,
   UsersIcon,
   WalletIcon,
 } from "lucide-react"
@@ -27,11 +26,8 @@ export const memberNavItems: NavItem[] = [
     url: "/dashboard",
     icon: <LayoutDashboardIcon className="size-4" />,
   },
-  {
-    title: "Profil",
-    url: "/profile",
-    icon: <UserIcon className="size-4" />,
-  },
+  // Profil sengaja tidak ada di sini: aksesnya lewat menu pengguna di kiri
+  // bawah (di atas "Keluar") supaya sidebar tidak dobel — lihat nav-user.tsx.
   {
     title: "Anggota",
     url: "/members",
