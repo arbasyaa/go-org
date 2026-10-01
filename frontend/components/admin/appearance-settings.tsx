@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useTheme } from "next-themes"
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -54,31 +52,13 @@ function primarySwatch(key: PrimaryKey): string {
   return `oklch(${p.l} ${p.c} ${p.h})`
 }
 
-type ThemeMode = "light" | "dark" | "system"
-
-const THEME_OPTIONS: Array<{
-  value: ThemeMode
-  label: string
-  icon: typeof SunIcon
-}> = [
-  { value: "light", label: "Light", icon: SunIcon },
-  { value: "dark", label: "Dark", icon: MoonIcon },
-  { value: "system", label: "System", icon: MonitorIcon },
-]
-
 export function AppearanceSettings({
   savedAppearance,
-  savedTheme,
 }: {
   savedAppearance?: string | null
-  savedTheme?: string | null
 }) {
-  const { setTheme } = useTheme()
   const [draft, setDraft] = useState<AppearanceConfig>(
     () => parseAppearance(savedAppearance) ?? DEFAULT_APPEARANCE
-  )
-  const [themeMode, setThemeMode] = useState<ThemeMode>(
-    (savedTheme as ThemeMode) || "system"
   )
   const [saving, setSaving] = useState(false)
 
@@ -88,16 +68,6 @@ export function AppearanceSettings({
   if (savedAppearance !== lastSaved) {
     setLastSaved(savedAppearance)
     setDraft(parseAppearance(savedAppearance) ?? DEFAULT_APPEARANCE)
-  }
-  const [lastSavedTheme, setLastSavedTheme] = useState(savedTheme)
-  if (savedTheme !== lastSavedTheme) {
-    setLastSavedTheme(savedTheme)
-    setThemeMode((savedTheme as ThemeMode) || "system")
-  }
-
-  function updateTheme(mode: ThemeMode) {
-    setThemeMode(mode)
-    setTheme(mode) // live via next-themes (class .dark di <html>)
   }
 
   function update(next: AppearanceConfig) {
@@ -117,7 +87,6 @@ export function AppearanceSettings({
         "json",
         JSON.stringify({
           appearance: serializeAppearance(draft),
-          theme: themeMode,
         })
       )
       const updated = await apiRequest<OrganizationSettings>("/settings", {
@@ -135,8 +104,7 @@ export function AppearanceSettings({
 
   function handleReset() {
     update(DEFAULT_APPEARANCE)
-    updateTheme("system")
-    toast.info("Tampilan dikembalikan ke bawaan — klik Simpan untuk permanen")
+    toast.info("Tampilan dikembalikan ke bawaan. Klik Simpan untuk permanen")
   }
 
   return (
@@ -150,28 +118,6 @@ export function AppearanceSettings({
       </CardHeader>
       <CardContent>
         <FieldGroup>
-          <Field>
-            <FieldLabel>Tema</FieldLabel>
-            <div className="flex flex-wrap gap-2">
-              {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
-                <Button
-                  key={value}
-                  type="button"
-                  size="sm"
-                  variant={themeMode === value ? "default" : "outline"}
-                  onClick={() => updateTheme(value)}
-                >
-                  <Icon data-icon="inline-start" />
-                  {label}
-                </Button>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Mode terang/gelap langsung berubah; tersimpan sebagai default
-              organisasi saat klik Simpan Tampilan.
-            </p>
-          </Field>
-
           <Field>
             <FieldLabel>Style</FieldLabel>
             <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
@@ -343,7 +289,7 @@ export function AppearanceSettings({
 
           <div className="rounded-xl border p-4">
             <p className="font-heading text-base font-semibold">
-              Pratinjau Heading — {FONT_OPTIONS[draft.headingFont].label}
+              Pratinjau Heading: {FONT_OPTIONS[draft.headingFont].label}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Teks isi memakai {FONT_OPTIONS[draft.textFont].label}. Tombol dan

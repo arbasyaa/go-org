@@ -25,7 +25,7 @@ import type { LetterCategory } from "@/lib/types"
 
 const DEFAULT_TEMPLATE = "{number:3}/{code}/{month_roman}/{year}"
 const EXAMPLE_TEMPLATE =
-  "{number:3}/{code}/{unit}/HIMATRIS/{month_roman}/{year}"
+  "{number:3}/{code}/{unit}/Permikomnas Jateng/{month_roman}/{year}"
 
 const emptyForm = {
   name: "",
@@ -288,7 +288,7 @@ export default function LetterCategoriesPage() {
               <p>
                 <span className="font-medium">Sistem (otomatis):</span>{" "}
                 {"{number}"} (default 3 digit), {"{number:3}"}, {"{code}"},{" "}
-                {"{month_roman}"}, {"{year}"} — gunakan {"{number:0}"} jika
+                {"{month_roman}"}, {"{year}"}. Gunakan {"{number:0}"} jika
                 tanpa zero-pad
               </p>
               <p>
@@ -297,7 +297,7 @@ export default function LetterCategoriesPage() {
               </p>
               <p>
                 <span className="font-medium">Literal:</span> teks bebas di
-                template, mis. HIMATRIS
+                template, mis. Permikomnas Jateng
               </p>
               <p>
                 Contoh:{" "}
@@ -310,7 +310,7 @@ export default function LetterCategoriesPage() {
                 >
                   {EXAMPLE_TEMPLATE}
                 </button>{" "}
-                → 001/SPm-i/PAN-Stuband/HIMATRIS/VII/2026
+                → 001/SPm-i/PAN-Stuband/Permikomnas Jateng/VII/2026
               </p>
             </div>
           </Field>

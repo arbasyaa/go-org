@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ImageIcon, Trash2Icon, UploadCloudIcon } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,29 @@ type ImageUploadFieldProps = {
   disabled?: boolean
   maxSizeMB?: number
   accept?: string
+  /** Teks alternatif pratinjau (mis. "Pratinjau bukti izin"). */
+  alt?: string
   className?: string
+}
+
+const MIME_LABELS: Record<string, string> = {
+  "image/jpeg": "JPG",
+  "image/png": "PNG",
+  "image/webp": "WebP",
+  "image/gif": "GIF",
+  "image/heic": "HEIC",
+}
+
+/** "image/jpeg,image/png" → "JPG, PNG" supaya keterangan tidak berbohong. */
+function formatAccepted(accept: string) {
+  return accept
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) =>
+      MIME_LABELS[entry] ?? entry.replace(/^image\//, "").replace(/^\./, "").toUpperCase()
+    )
+    .join(", ")
 }
 
 function formatBytes(bytes: number) {
@@ -29,6 +51,7 @@ export function ImageUploadField({
   disabled,
   maxSizeMB = 5,
   accept = "image/jpeg,image/png,image/webp,image/gif",
+  alt = "Pratinjau gambar",
   className,
 }: ImageUploadFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -52,14 +75,29 @@ export function ImageUploadField({
   const displayUrl =
     previewUrl ?? (existingHidden ? null : existingUrl) ?? null
 
+  const allowed = useMemo(
+    () =>
+      accept
+        .split(",")
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean),
+    [accept]
+  )
+  const acceptedLabel = formatAccepted(accept)
+
   const validateAndSet = useCallback(
     (file: File | null) => {
       if (!file) {
         onChange(null)
         return
       }
-      if (!file.type.startsWith("image/")) {
-        toast.error("File harus berupa gambar (JPG, PNG, WebP, GIF)")
+      const matches = allowed.some((entry) =>
+        entry.startsWith(".")
+          ? file.name.toLowerCase().endsWith(entry)
+          : file.type.toLowerCase() === entry
+      )
+      if (allowed.length > 0 && !matches) {
+        toast.error(`File harus berupa ${acceptedLabel}`)
         return
       }
       const maxBytes = maxSizeMB * 1024 * 1024
@@ -69,7 +107,7 @@ export function ImageUploadField({
       }
       onChange(file)
     },
-    [maxSizeMB, onChange]
+    [acceptedLabel, allowed, maxSizeMB, onChange]
   )
 
   function handleFiles(fileList: FileList | null) {
@@ -161,7 +199,7 @@ export function ImageUploadField({
               Tarik & lepas gambar, atau klik untuk memilih
             </p>
             <p className="text-xs text-muted-foreground">
-              JPG, PNG, WebP, GIF — maks. {maxSizeMB} MB
+              {acceptedLabel}, maks. {maxSizeMB} MB
             </p>
           </div>
         )}
@@ -184,7 +222,7 @@ export function ImageUploadField({
         </div>
       ) : existingUrl ? (
         <p className="text-xs text-muted-foreground">
-          Banner saat ini akan diganti jika Anda unggah file baru.
+          Gambar saat ini akan diganti jika Anda unggah file baru.
         </p>
       ) : null}
     </div>

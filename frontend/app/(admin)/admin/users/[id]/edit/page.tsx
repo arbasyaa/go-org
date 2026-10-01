@@ -170,7 +170,7 @@ export default function EditUserPage({
                       {user.avatar_url ? "Ganti Foto" : "Unggah Foto"}
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      JPG, PNG, WebP — maks. 5 MB
+                      JPG, PNG, WebP, maks. 5 MB
                     </p>
                   </div>
                   <input

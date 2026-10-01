@@ -167,7 +167,7 @@ function FolderTree({
             if (fileId) onDropFile(fileId, id)
           }}
           className={cn(
-            "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
+"flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
             isActive
               ? "bg-primary/10 font-medium text-primary"
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -177,7 +177,7 @@ function FolderTree({
         >
           <FolderIcon
             className={cn(
-              "size-4 shrink-0",
+"size-4 shrink-0",
               isActive ? "text-primary" : "text-amber-500"
             )}
           />
@@ -220,7 +220,7 @@ export function CloudStorageBrowser() {
 
   const folders = useApi(() =>
     apiRequest<StorageFolder[] | { items: StorageFolder[] }>(
-      "/storage/folders"
+"/storage/folders"
     ).then(unwrapList)
   )
   const files = useApi(
@@ -498,9 +498,9 @@ export function CloudStorageBrowser() {
 
     if (isPdfMime(file.mime_type)) {
       return (
-        <div className="flex size-full flex-col items-center justify-center gap-1 bg-red-50 dark:bg-red-950/30">
-          <FileTextIcon className="size-8 text-red-600 dark:text-red-400" />
-          <span className="text-[10px] font-semibold uppercase text-red-700 dark:text-red-300">
+        <div className="flex size-full flex-col items-center justify-center gap-1 bg-red-50 ">
+          <FileTextIcon className="size-8 text-red-600 " />
+          <span className="text-[10px] font-semibold uppercase text-red-700 ">
             PDF
           </span>
         </div>
@@ -509,9 +509,9 @@ export function CloudStorageBrowser() {
 
     if (isDocxMime(file.mime_type, file.name)) {
       return (
-        <div className="flex size-full flex-col items-center justify-center gap-1 bg-blue-50 dark:bg-blue-950/30">
-          <FileTextIcon className="size-8 text-blue-600 dark:text-blue-400" />
-          <span className="text-[10px] font-semibold uppercase text-blue-700 dark:text-blue-300">
+        <div className="flex size-full flex-col items-center justify-center gap-1 bg-blue-50 ">
+          <FileTextIcon className="size-8 text-blue-600 " />
+          <span className="text-[10px] font-semibold uppercase text-blue-700 ">
             DOCX
           </span>
         </div>
@@ -520,9 +520,9 @@ export function CloudStorageBrowser() {
 
     if (isSpreadsheetMime(file.mime_type, file.name)) {
       return (
-        <div className="flex size-full flex-col items-center justify-center gap-1 bg-emerald-50 dark:bg-emerald-950/30">
-          <Icon className="size-8 text-emerald-600 dark:text-emerald-400" />
-          <span className="text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-300">
+        <div className="flex size-full flex-col items-center justify-center gap-1 bg-emerald-50 ">
+          <Icon className="size-8 text-emerald-600 " />
+          <span className="text-[10px] font-semibold uppercase text-emerald-700 ">
             {getFileExtension(file.name) || "XLS"}
           </span>
         </div>
@@ -771,7 +771,7 @@ export function CloudStorageBrowser() {
 
         <div
           className={cn(
-            "relative min-h-[420px] min-w-0 flex-1 rounded-xl border bg-card",
+"relative min-h-[420px] min-w-0 flex-1 rounded-xl border bg-card",
             dragOver && "ring-2 ring-primary ring-offset-2"
           )}
           onDragOver={(e) => {
@@ -849,9 +849,9 @@ export function CloudStorageBrowser() {
                               if (fileId) void moveFile(fileId, folder.id)
                             }}
                             className={cn(
-                              "group flex cursor-pointer items-center gap-3 rounded-xl border bg-background p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/40",
+"group flex cursor-pointer items-center gap-3 rounded-xl border bg-background p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/40",
                               dropFolderId === folder.id &&
-                                "border-primary ring-2 ring-primary/40"
+"border-primary ring-2 ring-primary/40"
                             )}
                           >
                             <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
@@ -912,9 +912,9 @@ export function CloudStorageBrowser() {
                             <TableRow
                               key={folder.id}
                               className={cn(
-                                "cursor-pointer",
+"cursor-pointer",
                                 dropFolderId === folder.id &&
-                                  "bg-primary/10 outline-2 outline-primary"
+"bg-primary/10 outline-2 outline-primary"
                               )}
                               onClick={() => setCurrentFolderId(folder.id)}
                               onDragOver={(e) => {
@@ -986,7 +986,7 @@ export function CloudStorageBrowser() {
                               e.dataTransfer.effectAllowed = "move"
                             }}
                              className={cn(
-                              "group relative flex cursor-grab flex-col overflow-hidden rounded-xl border bg-background transition-shadow hover:shadow-md active:cursor-grabbing",
+"group relative flex cursor-grab flex-col overflow-hidden rounded-xl border bg-background transition-shadow hover:shadow-md active:cursor-grabbing",
                               selectedFileIds.has(file.id) && "border-primary ring-1 ring-primary"
                             )}
                           >
@@ -1068,7 +1068,7 @@ export function CloudStorageBrowser() {
                                   e.dataTransfer.effectAllowed = "move"
                                 }}
                                 className={cn(
-                                  "cursor-pointer",
+"cursor-pointer",
                                   selectedFileIds.has(file.id) && "bg-muted/50"
                                 )}
                                 onClick={() => setPreviewFile(file)}

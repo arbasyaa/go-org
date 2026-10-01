@@ -58,6 +58,8 @@ function OriginalPreview({
         src={previewUrl}
         alt={file.name}
         className="max-h-[min(700px,80vh)] w-full rounded-md border bg-muted object-contain"
+                    loading="lazy"
+                    decoding="async"
       />
     )
   }

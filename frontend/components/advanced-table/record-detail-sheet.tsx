@@ -44,7 +44,7 @@ function DetailValue({ item }: { item: DetailItem }) {
   if (item.type === "html" && typeof item.raw === "string") {
     return (
       <div
-        className="prose prose-sm max-w-none dark:prose-invert"
+        className="prose prose-sm max-w-none "
         dangerouslySetInnerHTML={{ __html: item.raw }}
       />
     )
@@ -75,6 +75,8 @@ export function AutoRecordDetail({ row }: { row: unknown }) {
               src={hero}
               alt={title}
               className="h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
             />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -116,7 +118,7 @@ export function AutoRecordDetail({ row }: { row: unknown }) {
             <div
               key={item.label}
               className={cn(
-                "rounded-xl border bg-muted/20 p-3",
+"rounded-xl border bg-muted/20 p-3",
                 item.type === "html" && "sm:col-span-2"
               )}
             >
@@ -149,6 +151,8 @@ export function AutoRecordDetail({ row }: { row: unknown }) {
                   src={img.url}
                   alt={img.label}
                   className="aspect-video w-full object-cover transition-transform group-hover:scale-[1.02]"
+                    loading="lazy"
+                    decoding="async"
                 />
                 <p className="truncate px-2 py-1.5 text-xs text-muted-foreground">
                   {img.label}
@@ -165,7 +169,7 @@ export function AutoRecordDetail({ row }: { row: unknown }) {
             Konten
           </h3>
           <div
-            className="prose prose-sm max-w-none rounded-xl border bg-muted/20 p-4 dark:prose-invert"
+            className="prose prose-sm max-w-none rounded-xl border bg-muted/20 p-4 "
             dangerouslySetInnerHTML={{ __html: content }}
           />
         </section>

@@ -20,7 +20,14 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
+import {
+  DIVISION_COLOR_LABELS,
+  DIVISION_COLOR_TOKENS,
+  divisionColorLabel,
+  divisionColorMap,
+} from "@/lib/division-color"
 import { unwrapList } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import type { Division } from "@/lib/types"
 
 export default function AdminDivisionsPage() {
@@ -35,9 +42,10 @@ export default function AdminDivisionsPage() {
   const [deleting, setDeleting] = useState<Division | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirming, setConfirming] = useState(false)
-  const [form, setForm] = useState({ name: "", description: "" })
+  const [form, setForm] = useState({ name: "", description: "", color: "" })
 
   const rows = useMemo(() => data ?? [], [data])
+  const colors = useMemo(() => divisionColorMap(rows), [rows])
   const stats = useMemo(
     () => [{ label: "Total Divisi", value: rows.length }],
     [rows]
@@ -45,7 +53,7 @@ export default function AdminDivisionsPage() {
 
   function openCreate() {
     setEditing(null)
-    setForm({ name: "", description: "" })
+    setForm({ name: "", description: "", color: "" })
     setOpen(true)
   }
 
@@ -54,6 +62,7 @@ export default function AdminDivisionsPage() {
     setForm({
       name: item.name,
       description: item.description ?? "",
+      color: item.color ?? "",
     })
     setOpen(true)
   }
@@ -112,6 +121,21 @@ export default function AdminDivisionsPage() {
         cell: ({ row }) => row.original.description ?? "-",
       },
       {
+        id: "warna",
+        enableSorting: false,
+        header: "Warna",
+        cell: ({ row }) => (
+          <span className="flex items-center gap-2 text-sm">
+            <span
+              aria-hidden
+              className="size-3 rounded-full"
+              style={{ backgroundColor: colors.get(row.original.id) }}
+            />
+            {divisionColorLabel(row.original.color)}
+          </span>
+        ),
+      },
+      {
         id: "aksi",
         enableHiding: false,
         header: () => <div className="text-right">Aksi</div>,
@@ -135,7 +159,7 @@ export default function AdminDivisionsPage() {
         ),
       },
     ],
-    []
+    [colors]
   )
 
   return (
@@ -182,6 +206,54 @@ export default function AdminDivisionsPage() {
                 setForm({ ...form, description: e.target.value })
               }
             />
+          </Field>
+          <Field>
+            <FieldLabel>Warna Kalender</FieldLabel>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                aria-label="Warna otomatis"
+                aria-pressed={form.color === ""}
+                title="Otomatis"
+                onClick={() => setForm({ ...form, color: "" })}
+                className={cn(
+                  "flex size-11 items-center justify-center rounded-full border-2 text-xs font-medium transition-colors",
+                  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  form.color === ""
+                    ? "border-foreground"
+                    : "border-transparent text-muted-foreground hover:bg-muted"
+                )}
+              >
+                Auto
+              </button>
+              {DIVISION_COLOR_TOKENS.map((token) => (
+                <button
+                  key={token}
+                  type="button"
+                  aria-label={DIVISION_COLOR_LABELS[token]}
+                  aria-pressed={form.color === token}
+                  title={DIVISION_COLOR_LABELS[token]}
+                  onClick={() => setForm({ ...form, color: token })}
+                  className={cn(
+                    "flex size-11 items-center justify-center rounded-full border-2 transition-colors",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    form.color === token
+                      ? "border-foreground"
+                      : "border-transparent hover:bg-muted"
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className="size-6 rounded-full"
+                    style={{ backgroundColor: `var(--${token})` }}
+                  />
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Dipakai untuk chip event di kalender (warna mengikuti divisi
+              pembuat event). Otomatis = dibagi berurutan dari daftar divisi.
+            </p>
           </Field>
         </FieldGroup>
       </FormDialog>

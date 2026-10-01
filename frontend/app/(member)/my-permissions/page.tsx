@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { ClipboardListIcon } from "lucide-react"
+import { CalendarIcon, ClipboardListIcon } from "lucide-react"
 import { PageHeader } from "@/components/page-header"
 import {
   EmptyState,
@@ -10,10 +10,13 @@ import {
   LoadingState,
 } from "@/components/page-states"
 import { StatusBadge } from "@/components/status-badge"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import { formatDate, unwrapList } from "@/lib/format"
+import { FADE_IN, fadeInDelay } from "@/lib/motion"
+import { storageUrl } from "@/lib/storage-url"
 import type { PermissionRequest } from "@/lib/types"
 
 const FILTERS = [
@@ -90,24 +93,37 @@ export default function MyPermissionsPage() {
         ) : null}
 
         <div className="flex flex-col gap-3">
-          {filtered.map((item) => (
+          {filtered.map((item, index) => (
             <article
               key={item.id}
-              className="rounded-2xl border bg-card p-4"
+              style={fadeInDelay(index)}
+              className={`${FADE_IN} overflow-hidden rounded-2xl border bg-card transition-colors hover:border-primary/30`}
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <ClipboardListIcon className="size-4" />
-                    <span className="text-xs">
-                      Diajukan {formatDate(item.created_at)}
-                    </span>
+              <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">
+                      {item.category?.name ?? "Tanpa kategori"}
+                    </Badge>
+                    <StatusBadge status={item.status} />
                   </div>
-                  <h3 className="mt-1 font-heading text-base font-medium">
+                  <h3 className="mt-2 font-heading text-base font-medium">
                     {item.event?.title ?? `Event #${item.event_id}`}
                   </h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {item.reason || "Tidak ada alasan tertulis"}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {item.event?.start_time ? (
+                      <span className="flex items-center gap-1.5">
+                        <CalendarIcon className="size-3.5" />
+                        Event {formatDate(item.event.start_time)}
+                      </span>
+                    ) : null}
+                    <span className="flex items-center gap-1.5">
+                      <ClipboardListIcon className="size-3.5" />
+                      Diajukan {formatDate(item.created_at)}
+                    </span>
+                  </p>
+                  <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                    {item.reason?.trim() || "Tanpa keterangan"}
                   </p>
                   {item.note ? (
                     <p className="mt-2 rounded-xl bg-muted/50 px-3 py-2 text-xs">
@@ -115,19 +131,40 @@ export default function MyPermissionsPage() {
                     </p>
                   ) : null}
                 </div>
-                <StatusBadge status={item.status} />
-              </div>
-              {item.event_id ? (
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    render={<Link href={`/events/${item.event_id}`} />}
+                {item.proof_url ? (
+                  <a
+                    href={storageUrl(item.proof_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Lihat bukti gambar"
+                    className="group relative size-24 shrink-0 overflow-hidden rounded-xl border bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:size-28"
                   >
-                    Buka event
-                  </Button>
-                </div>
-              ) : null}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={storageUrl(item.proof_url)}
+                      alt="Bukti gambar pengajuan izin"
+                      className="size-full object-cover transition-transform group-hover:scale-105"
+                    loading="lazy"
+                    decoding="async"
+                    />
+                    <span className="absolute inset-x-0 bottom-0 bg-foreground/70 py-1 text-center text-xs text-background">
+                      Lihat
+                    </span>
+                  </a>
+                ) : null}
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t px-4 py-3">
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  Pengajuan #{item.id}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={<Link href={`/events/${item.event_id}`} />}
+                >
+                  Buka event
+                </Button>
+              </div>
             </article>
           ))}
         </div>

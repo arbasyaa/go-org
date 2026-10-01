@@ -203,10 +203,7 @@ export default function AdminSettingsPage() {
         ) : null}
 
         {settings ? (
-          <AppearanceSettings
-            savedAppearance={data?.appearance}
-            savedTheme={data?.theme}
-          />
+          <AppearanceSettings savedAppearance={data?.appearance} />
         ) : null}
       </div>
     </>

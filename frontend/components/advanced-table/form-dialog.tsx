@@ -22,6 +22,7 @@ export function FormDialog({
   saving,
   submitLabel = "Simpan",
   cancelLabel = "Batal",
+  submitDisabled = false,
   className = "sm:max-w-lg",
   scrollable = true,
 }: {
@@ -34,6 +35,8 @@ export function FormDialog({
   saving?: boolean
   submitLabel?: string
   cancelLabel?: string
+  /** Nonaktifkan tombol simpan (mis. aksi sudah ditutup aturan waktu). */
+  submitDisabled?: boolean
   className?: string
   scrollable?: boolean
 }) {
@@ -79,7 +82,7 @@ export function FormDialog({
             >
               {cancelLabel}
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || submitDisabled}>
               {saving ? "Menyimpan..." : submitLabel}
             </Button>
           </DialogFooter>

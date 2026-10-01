@@ -33,9 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
     try {
-      const [me, perms] = await Promise.all([getMe(), getPermissions()])
+      // GET /me sudah menyertakan permissions; fallback ke /me/permissions
+      // kalau backend lama (satu request lebih hemat per load).
+      const me = await getMe()
       setUser(me)
-      setPermissions(perms)
+      setPermissions(me.permissions ?? (await getPermissions()))
     } catch {
       setUser(null)
       setPermissions([])

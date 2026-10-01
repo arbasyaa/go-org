@@ -11,7 +11,6 @@ import { Toaster } from "@/components/ui/sonner"
 import { AppearanceSync } from "@/components/appearance-sync"
 import { AuthProvider } from "@/components/providers/auth-provider"
 import { ThemeProvider } from "@/components/providers/theme-provider"
-import { ThemeSync } from "@/components/theme-sync"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import "./globals.css"
 
@@ -24,27 +23,32 @@ const inter = Inter({
 })
 const poppins = Poppins({
   variable: "--font-poppins",
+  preload: false,
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
 })
 const manrope = Manrope({
   variable: "--font-manrope",
+  preload: false,
   subsets: ["latin"],
   display: "swap",
 })
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
+  preload: false,
   subsets: ["latin"],
   display: "swap",
 })
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
+  preload: false,
   subsets: ["latin"],
   display: "swap",
 })
 const lora = Lora({
   variable: "--font-lora",
+  preload: false,
   subsets: ["latin"],
   display: "swap",
 })
@@ -59,7 +63,7 @@ const fontVariables = [
 ].join(" ")
 
 export const metadata: Metadata = {
-  title: "HIMATRIS",
+  title: "Permikomnas Jateng",
   description: "Sistem Informasi Manajemen Organisasi",
 }
 
@@ -75,8 +79,13 @@ export default function RootLayout({
       className={`${fontVariables} h-full antialiased`}
     >
       <body className="font-sans min-h-full flex flex-col">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <ThemeSync />
+        {/* Tampilan dikunci terang: dark mode dihapus (DESIGN.md §12). */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          forcedTheme="light"
+        >
           <AppearanceSync />
           <TooltipProvider>
             <AuthProvider>{children}</AuthProvider>

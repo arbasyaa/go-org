@@ -11,7 +11,10 @@ import {
   FormDialog,
   sortableHeader,
 } from "@/components/advanced-table"
-import { FormSelect } from "@/components/form-select"
+import {
+  EventAudienceField,
+  type EventAudienceValue,
+} from "@/components/event-audience-field"
 import { ImageUploadField } from "@/components/image-upload-field"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
@@ -24,20 +27,28 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useApi } from "@/hooks/use-api"
+import { useAudienceCatalog } from "@/hooks/use-audience-catalog"
 import { apiRequest } from "@/lib/api"
-import { toLocalInput, toRFC3339 } from "@/lib/datetime"
+import { toLocalInput, toRFC3339, endOfDayInput } from "@/lib/datetime"
 import { formatDate, unwrapList } from "@/lib/format"
 import { eventBannerUrl } from "@/lib/event-banner"
-import type { Division, Event } from "@/lib/types"
+import { EventAudienceBadge } from "@/lib/event-audience"
+import type { Event } from "@/lib/types"
 
 const emptyForm = {
   title: "",
   description: "",
   location: "",
+  link_url: "",
   start_time: "",
   end_time: "",
-  division_id: "",
   allow_permission: false,
+}
+
+const emptyAudience: EventAudienceValue = {
+  audience: "custom",
+  divisionIds: [],
+  roleIds: [],
 }
 
 export default function AdminEventsPage() {
@@ -45,26 +56,17 @@ export default function AdminEventsPage() {
     const result = await apiRequest<Event[] | { items: Event[] }>("/events")
     return unwrapList(result)
   })
-  const divisions = useApi(() =>
-    apiRequest<Division[] | { items: Division[] }>("/divisions").then(unwrapList)
-  )
+  const catalog = useAudienceCatalog()
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Event | null>(null)
   const [deleting, setDeleting] = useState<Event | null>(null)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [audience, setAudience] = useState<EventAudienceValue>(emptyAudience)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
 
   const rows = useMemo(() => data ?? [], [data])
-  const divisionOptions = useMemo(
-    () =>
-      (divisions.data ?? []).map((d) => ({
-        value: String(d.id),
-        label: d.name,
-      })),
-    [divisions.data]
-  )
 
   const stats = useMemo(
     () => [
@@ -79,6 +81,7 @@ export default function AdminEventsPage() {
   function openCreate() {
     setEditing(null)
     setForm(emptyForm)
+    setAudience(emptyAudience)
     setBannerFile(null)
     setOpen(true)
   }
@@ -89,10 +92,15 @@ export default function AdminEventsPage() {
       title: event.title,
       description: event.description ?? "",
       location: event.location ?? "",
+      link_url: event.link_url ?? "",
       start_time: toLocalInput(event.start_time),
       end_time: toLocalInput(event.end_time),
-      division_id: event.division_id ? String(event.division_id) : "",
       allow_permission: !!event.allow_permission,
+    })
+    setAudience({
+      audience: event.audience === "all" ? "all" : "custom",
+      divisionIds: event.target_division_ids ?? [],
+      roleIds: event.target_role_ids ?? [],
     })
     setBannerFile(null)
     setOpen(true)
@@ -113,14 +121,22 @@ export default function AdminEventsPage() {
   async function handleSubmit() {
     setSaving(true)
     try {
+      const audienceFields = {
+        audience: audience.audience,
+        target_division_ids: audience.divisionIds,
+        target_role_ids: audience.roleIds,
+      }
+      // Waktu selesai opsional: kosong = penghujung hari mulai (zona browser).
+      const startTime = toRFC3339(form.start_time)
+      const endTime = toRFC3339(form.end_time || endOfDayInput(form.start_time))
       if (editing && !bannerFile) {
         await apiRequest(`/events/${editing.id}`, {
           method: "PUT",
           body: {
             ...form,
-            start_time: toRFC3339(form.start_time),
-            end_time: toRFC3339(form.end_time),
-            division_id: form.division_id ? Number(form.division_id) : null,
+            ...audienceFields,
+            start_time: startTime,
+            end_time: endTime,
           },
         })
       } else {
@@ -128,10 +144,14 @@ export default function AdminEventsPage() {
         body.append("title", form.title)
         body.append("description", form.description)
         body.append("location", form.location)
-        body.append("start_time", toRFC3339(form.start_time))
-        body.append("end_time", toRFC3339(form.end_time))
+        body.append("link_url", form.link_url)
+        body.append("start_time", startTime)
+        body.append("end_time", endTime)
         body.append("allow_permission", String(form.allow_permission))
-        if (form.division_id) body.append("division_id", form.division_id)
+        body.append("audience", audience.audience)
+        for (const id of audience.divisionIds)
+          body.append("target_division_ids", String(id))
+        for (const id of audience.roleIds) body.append("target_role_ids", String(id))
         if (bannerFile) body.append("banner", bannerFile)
 
         if (editing) {
@@ -170,6 +190,8 @@ export default function AdminEventsPage() {
               src={url}
               alt={row.original.title}
               className="h-14 w-24 rounded-lg border object-cover shadow-sm"
+                    loading="lazy"
+                    decoding="async"
             />
           )
         },
@@ -187,6 +209,12 @@ export default function AdminEventsPage() {
         accessorKey: "start_time",
         header: sortableHeader("Mulai"),
         cell: ({ row }) => formatDate(row.original.start_time),
+      },
+      {
+        id: "cakupan",
+        header: "Untuk",
+        enableSorting: false,
+        cell: ({ row }) => <EventAudienceBadge event={row.original} />,
       },
       {
         id: "status",
@@ -274,13 +302,24 @@ export default function AdminEventsPage() {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
           </Field>
-          <Field>
-            <FieldLabel>Lokasi</FieldLabel>
-            <Input
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-            />
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field>
+              <FieldLabel>Lokasi</FieldLabel>
+              <Input
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Link Event</FieldLabel>
+              <Input
+                type="url"
+                placeholder="https://meet.google.com/..."
+                value={form.link_url}
+                onChange={(e) => setForm({ ...form, link_url: e.target.value })}
+              />
+            </Field>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field>
               <FieldLabel>Mulai</FieldLabel>
@@ -297,19 +336,21 @@ export default function AdminEventsPage() {
                 type="datetime-local"
                 value={form.end_time}
                 onChange={(e) => setForm({ ...form, end_time: e.target.value })}
-                required
               />
+              <p className="text-xs text-muted-foreground">
+                Opsional. Dikosongkan berarti event berakhir di penghujung hari
+                mulai.
+              </p>
             </Field>
           </div>
-          <Field>
-            <FieldLabel>Divisi</FieldLabel>
-            <FormSelect
-              value={form.division_id}
-              onValueChange={(v) => setForm({ ...form, division_id: v })}
-              options={divisionOptions}
-              placeholder="Opsional"
-            />
-          </Field>
+          <EventAudienceField
+            value={audience}
+            onChange={setAudience}
+            divisions={catalog.divisions}
+            roles={catalog.roles}
+            counts={catalog.counts}
+            activeMemberCount={catalog.memberCount}
+          />
           <Field className="flex flex-row items-center justify-between gap-3">
             <FieldLabel>Izinkan perizinan</FieldLabel>
             <Switch

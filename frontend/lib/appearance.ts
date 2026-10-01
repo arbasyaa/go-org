@@ -3,7 +3,7 @@
  *
  * Konfigurasi (style, base color, warna primer, palet chart, font, radius)
  * disimpan sebagai JSON di kolom `appearance` organization_settings, lalu
- * diterjemahkan menjadi CSS variables (:root + .dark) yang di-inject ke <head>
+ * diterjemahkan menjadi CSS variables (:root) yang di-inject ke <head>
  * saat runtime — menimpa default `globals.css` (preset shadcn base-mira).
  */
 
@@ -21,6 +21,7 @@ export type BaseKey = "neutral" | "stone" | "zinc" | "gray" | "slate"
 
 export type PrimaryKey =
   | "mono"
+  | "indigo"
   | "cyan"
   | "blue"
   | "teal"
@@ -54,7 +55,7 @@ export interface AppearanceConfig {
 export const DEFAULT_APPEARANCE: AppearanceConfig = {
   style: "mira",
   base: "neutral",
-  primary: "cyan",
+  primary: "indigo",
   chart: "primary",
   headingFont: "inter",
   textFont: "inter",
@@ -101,73 +102,66 @@ interface Oklch {
 
 interface PrimaryColor {
   label: string
+  /** Satu-satunya varian warna: tampilan selalu terang. */
   light: Oklch
-  dark: Oklch
-  /** Teks di atas warna primer (light & dark memakai nilai sama). */
+  /** Teks di atas warna primer. */
   fg: string
-  fgDark?: string
 }
 
 export const PRIMARY_COLORS: Record<PrimaryKey, PrimaryColor> = {
   mono: {
     label: "Mono",
     light: { l: 0.205, c: 0, h: 0 },
-    dark: { l: 0.922, c: 0, h: 0 },
     fg: "oklch(0.985 0 0)",
-    fgDark: "oklch(0.205 0 0)",
+  },
+  indigo: {
+    label: "Indigo",
+    light: { l: 0.45, c: 0.13, h: 264 },
+    fg: "oklch(0.985 0.005 264)",
   },
   cyan: {
     label: "Cyan",
     light: { l: 0.52, c: 0.105, h: 223.128 },
-    dark: { l: 0.45, c: 0.085, h: 224.283 },
     fg: "oklch(0.984 0.019 200.873)",
   },
   blue: {
     label: "Blue",
     light: { l: 0.546, c: 0.245, h: 262.881 },
-    dark: { l: 0.623, c: 0.214, h: 259.815 },
     fg: "oklch(0.984 0.014 254)",
   },
   teal: {
     label: "Teal",
     light: { l: 0.511, c: 0.096, h: 186.391 },
-    dark: { l: 0.6, c: 0.104, h: 180.72 },
     fg: "oklch(0.984 0.014 180)",
   },
   emerald: {
     label: "Emerald",
     light: { l: 0.596, c: 0.145, h: 163.225 },
-    dark: { l: 0.508, c: 0.118, h: 165.612 },
     fg: "oklch(0.979 0.021 166)",
   },
   amber: {
     label: "Amber",
     light: { l: 0.555, c: 0.163, h: 48.998 },
-    dark: { l: 0.666, c: 0.179, h: 58.318 },
     fg: "oklch(0.987 0.022 95)",
   },
   orange: {
     label: "Orange",
     light: { l: 0.553, c: 0.195, h: 38.402 },
-    dark: { l: 0.646, c: 0.222, h: 41.116 },
     fg: "oklch(0.98 0.016 73)",
   },
   rose: {
     label: "Rose",
     light: { l: 0.586, c: 0.253, h: 17.585 },
-    dark: { l: 0.645, c: 0.246, h: 16.439 },
     fg: "oklch(0.969 0.015 12)",
   },
   violet: {
     label: "Violet",
     light: { l: 0.541, c: 0.281, h: 293.009 },
-    dark: { l: 0.606, c: 0.25, h: 292.717 },
     fg: "oklch(0.969 0.016 294)",
   },
   purple: {
     label: "Purple",
     light: { l: 0.558, c: 0.288, h: 302.321 },
-    dark: { l: 0.627, c: 0.265, h: 303.9 },
     fg: "oklch(0.977 0.014 308)",
   },
 }
@@ -234,7 +228,7 @@ export const STYLE_PRESETS: Record<
     label: "Mira",
     config: {
       base: "neutral",
-      primary: "cyan",
+      primary: "indigo",
       chart: "primary",
       headingFont: "inter",
       textFont: "inter",
@@ -400,15 +394,14 @@ export function chartColors(cfg: AppearanceConfig): string[] {
   return ramp.map(([l, c]) => oklch(l, c * chroma, hue))
 }
 
-function colorTokens(cfg: AppearanceConfig): {
-  light: Record<string, string>
-  dark: Record<string, string>
-} {
+// Token :root dari konfigurasi tampilan. Tampilan selalu terang — tidak ada
+// varian .dark lagi sejak dark mode dihapus (DESIGN.md §12).
+function colorTokens(cfg: AppearanceConfig): Record<string, string> {
   const f = BASE_COLORS[cfg.base]
   const p = PRIMARY_COLORS[cfg.primary]
   const charts = chartColors(cfg)
 
-  const light: Record<string, string> = {
+  const tokens: Record<string, string> = {
     background: "oklch(1 0 0)",
     foreground: tint(0.145, f, 0.9),
     card: "oklch(1 0 0)",
@@ -420,7 +413,7 @@ function colorTokens(cfg: AppearanceConfig): {
     secondary: tint(0.967, f, 0.15),
     "secondary-foreground": tint(0.21, f, 0.9),
     muted: tint(0.97, f, 0.15),
-    "muted-foreground": tint(0.556, f, 1),
+    "muted-foreground": tint(0.53, f, 1),
     accent: tint(0.97, f, 0.15),
     "accent-foreground": tint(0.205, f, 0.9),
     destructive: "oklch(0.577 0.245 27.325)",
@@ -437,58 +430,25 @@ function colorTokens(cfg: AppearanceConfig): {
     "sidebar-ring": tint(0.708, f, 0.6),
   }
 
-  const dark: Record<string, string> = {
-    background: tint(0.145, f, 0.9),
-    foreground: tint(0.985, f, 0.08),
-    card: tint(0.205, f, 0.9),
-    "card-foreground": tint(0.985, f, 0.08),
-    popover: tint(0.205, f, 0.9),
-    "popover-foreground": tint(0.985, f, 0.08),
-    primary: oklch(p.dark.l, p.dark.c, p.dark.h),
-    "primary-foreground": p.fgDark ?? p.fg,
-    secondary: tint(0.274, f, 0.4),
-    "secondary-foreground": tint(0.985, f, 0.08),
-    muted: tint(0.269, f, 0.5),
-    "muted-foreground": tint(0.708, f, 0.6),
-    accent: tint(0.269, f, 0.5),
-    "accent-foreground": tint(0.985, f, 0.08),
-    destructive: "oklch(0.704 0.191 22.216)",
-    border: "oklch(1 0 0 / 10%)",
-    input: "oklch(1 0 0 / 15%)",
-    ring: tint(0.556, f, 0.6),
-    sidebar: tint(0.205, f, 0.9),
-    "sidebar-foreground": tint(0.985, f, 0.08),
-    "sidebar-primary": oklch(p.dark.l, p.dark.c, p.dark.h),
-    "sidebar-primary-foreground": p.fgDark ?? p.fg,
-    "sidebar-accent": tint(0.269, f, 0.5),
-    "sidebar-accent-foreground": tint(0.985, f, 0.08),
-    "sidebar-border": "oklch(1 0 0 / 10%)",
-    "sidebar-ring": tint(0.556, f, 0.6),
-  }
-
   charts.forEach((color, i) => {
-    light[`chart-${i + 1}`] = color
-    dark[`chart-${i + 1}`] = color
+    tokens[`chart-${i + 1}`] = color
   })
 
-  return { light, dark }
+  return tokens
 }
 
 export function buildAppearanceCss(cfg: AppearanceConfig): string {
-  const { light, dark } = colorTokens(cfg)
+  const tokens = colorTokens(cfg)
   const fontRules = [
     `--font-sans: var(${FONT_OPTIONS[cfg.textFont].cssVar});`,
     `--font-heading: var(${FONT_OPTIONS[cfg.headingFont].cssVar});`,
     `--radius: ${cfg.radius}rem;`,
   ]
-  const rootRules = Object.entries(light)
+  const rootRules = Object.entries(tokens)
     .map(([k, v]) => `--${k}: ${v};`)
     .concat(fontRules)
     .join("\n  ")
-  const darkRules = Object.entries(dark)
-    .map(([k, v]) => `--${k}: ${v};`)
-    .join("\n  ")
-  return `:root {\n  ${rootRules}\n}\n.dark {\n  ${darkRules}\n}`
+  return `:root {\n  ${rootRules}\n}`
 }
 
 const STYLE_TAG_ID = "app-appearance"

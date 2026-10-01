@@ -205,6 +205,8 @@ export default function ProfilePage() {
                           src={storageUrl(user.avatar_url)}
                           alt={user.full_name}
                           className="size-64 rounded-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                         />
                       </DialogContent>
                     ) : null}
@@ -219,7 +221,7 @@ export default function ProfilePage() {
                       {user.avatar_url ? "Ganti Foto" : "Unggah Foto"}
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      JPG, PNG, WebP — maks. 5 MB
+                      JPG, PNG, WebP, maks. 5 MB
                     </p>
                   </div>
                   <input

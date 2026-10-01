@@ -2,6 +2,26 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Animasi masuk: satu gerakan orkestrasi per halaman (transform+opacity saja,
+   GPU-composited, tanpa layout shift). Dimatikan prefers-reduced-motion di bawah. */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.5rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@utility animate-fade-in-up {
+  animation: fade-in-up 0.4s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Dark mode dihapus: varian `dark:` tetap didefinisikan agar utility bawaan
+   komponen shadcn tidak jatuh ke prefers-color-scheme, tapi `.dark` tidak
+   pernah dipasang di <html> sehingga utility itu inert. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -49,6 +69,7 @@
 }
 
 :root {
+  /* Tampilan selalu terang (putih) — dark mode dihapus, lihat DESIGN.md §12. */
   /* Font default; kustomisasi tampilan menimpa keduanya saat runtime. */
   --font-sans: var(--font-inter);
   --font-heading: var(--font-inter);
@@ -56,68 +77,50 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.52 0.105 223.128);
-  --primary-foreground: oklch(0.984 0.019 200.873);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
+  /* Aksen indigo korporat — sengaja jauh dari 6 warna divisi (jarak oklab
+     >= 0.16) supaya chip kalender tidak tertukar dengan warna aksi. */
+  --primary: oklch(0.45 0.13 264);
+  --primary-foreground: oklch(0.985 0.005 264);
+  --secondary: oklch(0.967 0.002 264);
+  --secondary-foreground: oklch(0.21 0.006 264);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* 0.53 (bukan 0.556 bawaan) agar teks sekunder 12–14px lolos APCA Lc >= 75. */
+  --muted-foreground: oklch(0.53 0 0);
+  --accent: oklch(0.97 0.004 264);
+  --accent-foreground: oklch(0.205 0.01 264);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.865 0.127 207.078);
-  --chart-2: oklch(0.715 0.143 215.221);
-  --chart-3: oklch(0.609 0.126 221.723);
-  --chart-4: oklch(0.52 0.105 223.128);
-  --chart-5: oklch(0.45 0.085 224.283);
+  --ring: oklch(0.55 0.10 264);
+  /* Ramp chart: 5 langkah satu hue aksen, semua >= 3:1 terhadap putih. */
+  --chart-1: oklch(0.66 0.09 264);
+  --chart-2: oklch(0.6 0.12 264);
+  --chart-3: oklch(0.53 0.14 264);
+  --chart-4: oklch(0.45 0.13 264);
+  --chart-5: oklch(0.38 0.11 264);
+  /* Warna chip kalender per divisi — dipakai lewat var(--chip-color). Admin
+     memilih salah satunya di menu Divisi (kolom `division.color`); kosong =
+     dibagi otomatis dari daftar divisi. 8 token ini dipilih dengan sebaran
+     hue merata: jarak oklab antar warna >= 0.122, ke aksen >= 0.164. */
+  --division-1: oklch(0.64 0.15 30);
+  --division-2: oklch(0.56 0.12 80);
+  --division-3: oklch(0.58 0.17 125);
+  --division-4: oklch(0.64 0.15 165);
+  --division-5: oklch(0.56 0.12 205);
+  --division-6: oklch(0.62 0.13 255);
+  --division-7: oklch(0.58 0.17 300);
+  --division-8: oklch(0.56 0.12 345);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.609 0.126 221.723);
-  --sidebar-primary-foreground: oklch(0.984 0.019 200.873);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.45 0.13 264);
+  --sidebar-primary-foreground: oklch(0.985 0.005 264);
+  --sidebar-accent: oklch(0.97 0.004 264);
+  --sidebar-accent-foreground: oklch(0.205 0.01 264);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.55 0.10 264);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.45 0.085 224.283);
-  --primary-foreground: oklch(0.984 0.019 200.873);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.865 0.127 207.078);
-  --chart-2: oklch(0.715 0.143 215.221);
-  --chart-3: oklch(0.609 0.126 221.723);
-  --chart-4: oklch(0.52 0.105 223.128);
-  --chart-5: oklch(0.45 0.085 224.283);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.715 0.143 215.221);
-  --sidebar-primary-foreground: oklch(0.302 0.056 229.695);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -130,9 +133,49 @@
   html {
     @apply font-sans;
   }
+  /* Kontrak state untuk elemen interaktif non-shadcn (mis. tombol tanggal dan
+     chip di kalender). Komponen shadcn menimpanya dengan utility sendiri. */
+  :is(a, button, input, textarea, select, summary):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  :is(button, input, textarea, select):disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 @layer utilities {
+  /* Chip kalender: latar ditint warna divisi, teks tetap foreground agar
+     kontras tidak bergantung pada warna divisinya. */
+  .event-chip {
+    background: color-mix(
+      in oklab,
+      var(--chip-color, var(--muted-foreground)) 16%,
+      var(--card)
+    );
+    border-left: 3px solid var(--chip-color, var(--muted-foreground));
+    color: var(--card-foreground);
+  }
+  .event-chip:hover {
+    background: color-mix(
+      in oklab,
+      var(--chip-color, var(--muted-foreground)) 28%,
+      var(--card)
+    );
+  }
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;

@@ -133,6 +133,8 @@ export default function MembersPage() {
                     src={storageUrl(selected.avatar_url)}
                     alt={selected.full_name}
                     className="size-28 rounded-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                   />
                 ) : (
                   <Avatar className="size-28">

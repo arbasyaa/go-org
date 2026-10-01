@@ -11,7 +11,7 @@ import {
   UsersIcon,
   WalletIcon,
 } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import dynamic from "next/dynamic"
 import { useAuth } from "@/components/providers/auth-provider"
 import { PageHeader } from "@/components/page-header"
 import { ErrorState, LoadingState } from "@/components/page-states"
@@ -24,12 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from "@/components/ui/chart"
+import { Skeleton } from "@/components/ui/skeleton"
+import type { ChartConfig } from "@/components/ui/chart"
+import { FADE_IN } from "@/lib/motion"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import { formatCurrency, formatDate, unwrapList } from "@/lib/format"
@@ -55,6 +52,15 @@ type StatCard = {
 const eventChartConfig = {
   count: { label: "Event", color: "var(--primary)" },
 } satisfies ChartConfig
+
+// recharts (±100 KB) menyusul setelah halaman tampil, bukan bagian bundle awal.
+const EventStatusChart = dynamic(
+  () =>
+    import("@/components/admin/event-status-chart").then(
+      (mod) => mod.EventStatusChart
+    ),
+  { ssr: false, loading: () => <Skeleton className="h-56 w-full" /> }
+)
 
 export default function AdminDashboardPage() {
   const { hasPermission } = useAuth()
@@ -246,7 +252,7 @@ export default function AdminDashboardPage() {
           { label: "Dashboard" },
         ]}
       />
-      <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
+      <div className={`${FADE_IN} flex flex-1 flex-col gap-6 p-4 pt-0`}>
         {loading ? <LoadingState rows={4} /> : null}
         {firstError ? <ErrorState message={firstError} /> : null}
 
@@ -314,34 +320,10 @@ export default function AdminDashboardPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ChartContainer
+                    <EventStatusChart
+                      data={eventChartData}
                       config={eventChartConfig}
-                      className="aspect-auto h-56 w-full"
-                    >
-                      <BarChart data={eventChartData} accessibilityLayer>
-                        <CartesianGrid vertical={false} />
-                        <XAxis
-                          dataKey="status"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                        />
-                        <YAxis
-                          allowDecimals={false}
-                          tickLine={false}
-                          axisLine={false}
-                          width={28}
-                        />
-                        <ChartTooltip
-                          content={<ChartTooltipContent hideLabel />}
-                        />
-                        <Bar
-                          dataKey="count"
-                          fill="var(--color-count)"
-                          radius={8}
-                        />
-                      </BarChart>
-                    </ChartContainer>
+                    />
                   </CardContent>
                 </Card>
               ) : null}

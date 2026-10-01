@@ -13,3 +13,12 @@ export function toLocalInput(value?: string): string {
   const pad = (n: number) => String(n).padStart(2, "0")
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
+/**
+ * Pengganti waktu selesai yang dikosongkan: penghujung hari mulai, dihitung di
+ * zona waktu browser. Backend tidak tahu tz user, jadi UI yang menentukannya.
+ */
+export function endOfDayInput(startLocalValue: string): string {
+  const day = toLocalInput(startLocalValue).slice(0, 10)
+  return day ? `${day}T23:59` : ""
+}

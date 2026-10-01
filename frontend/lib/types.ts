@@ -22,12 +22,16 @@ export interface User {
   division?: string | Division | null
   role?: string | Role | null
   violation_count?: number
+  /** Daftar permission code — dikirim bersama GET /me. */
+  permissions?: string[]
 }
 
 export interface Division {
   id: number
   name: string
   description?: string | null
+  /** Nama token warna (`division-1..8`); kosong = otomatis. */
+  color?: string | null
 }
 
 export interface Role {
@@ -61,15 +65,26 @@ export interface Event {
   description?: string | null
   division_id?: number | null
   division?: Division | string | null
+  /** Divisi pembuat event — penentu warna chip di kalender. */
+  created_by_id?: number
+  created_by_division_id?: number | null
+  created_by_division_name?: string | null
   location?: string | null
+  link_url?: string | null
   start_time: string
   end_time: string
   status: "upcoming" | "ongoing" | "finished" | string
   allow_permission?: boolean
+  audience?: "all" | "custom" | string
+  target_division_ids?: number[]
+  target_role_ids?: number[]
+  target_division_names?: string[]
+  target_role_names?: string[]
   banner_url?: string | null
   banner_image_url?: string | null
   my_attendance_status?: string | null
   my_permission_request_status?: string | null
+  is_participant?: boolean
 }
 
 export interface Attendance {
@@ -100,6 +115,9 @@ export interface PermissionRequest {
   id: number
   event_id: number
   user_id: number
+  /** Kategori izin (master data): kategori_id + ringkasan {id,name}. */
+  category_id?: number
+  category?: { id: number; name: string } | null
   reason?: string | null
   proof_url?: string | null
   status: "pending" | "approved" | "rejected" | string
@@ -107,6 +125,12 @@ export interface PermissionRequest {
   created_at?: string
   event?: Event
   user?: User
+}
+
+export interface PermissionCategory {
+  id: number
+  name: string
+  description?: string | null
 }
 
 export interface Announcement {

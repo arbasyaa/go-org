@@ -4,8 +4,6 @@ import { use, useMemo } from "react"
 import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DownloadIcon } from "lucide-react"
-import jsPDF from "jspdf"
-import autoTable from "jspdf-autotable"
 import {
   AdvancedDataTable,
   AdvancedResourcePage,
@@ -68,7 +66,12 @@ export default function EventRecapPage({
     []
   )
 
-  function exportPdf() {
+  async function exportPdf() {
+    // Dimuat saat dipakai: jspdf + autotable ≈ 141 KB, tidak perlu di load awal.
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ])
     const doc = new jsPDF()
     const event = data?.event
     const title = event?.title ?? "Rekap Absensi"

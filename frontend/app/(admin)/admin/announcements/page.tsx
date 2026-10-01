@@ -262,6 +262,8 @@ export default function AdminAnnouncementsPage() {
                 src={storageUrl(viewing.banner_url)}
                 alt={viewing.title}
                 className="mb-4 w-full rounded-lg object-cover"
+                    loading="lazy"
+                    decoding="async"
               />
             ) : null}
 

@@ -22,7 +22,7 @@ export default function AuthLayout({
       <div className="relative hidden overflow-hidden bg-muted lg:block">
         <Image
           src={allPengurus}
-          alt="Pengurus HIMATRIS"
+          alt="Pengurus Permikomnas Jateng"
           fill
           priority
           sizes="50vw"
@@ -37,8 +37,8 @@ export default function AuthLayout({
               Kelola organisasi Anda
             </h2>
             <p className="text-white/80">
-              Event, absensi, perizinan, surat, keuangan, dan pengumuman — semua
-              dalam satu platform.
+              Event, absensi, perizinan, surat, keuangan, dan pengumuman dalam satu
+              platform.
             </p>
           </div>
         </div>

@@ -107,7 +107,7 @@ export function AttachmentUploadField({
           Tarik & lepas file, atau klik untuk memilih
         </p>
         <p className="text-xs text-muted-foreground">
-          PDF, gambar, dokumen — bisa lebih dari satu file
+          PDF, gambar, atau dokumen, bisa lebih dari satu file
         </p>
       </div>
 
@@ -136,6 +136,8 @@ export function AttachmentUploadField({
                       src={preview}
                       alt={file.name}
                       className="size-full object-cover"
+                    loading="lazy"
+                    decoding="async"
                     />
                   </div>
                 ) : (

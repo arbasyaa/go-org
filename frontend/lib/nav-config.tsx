@@ -106,7 +106,16 @@ export const adminNavItems: NavItem[] = [
     title: "Approval Perizinan",
     url: "/admin/permissions",
     icon: <BellIcon className="size-4" />,
-    permission: "attendance.approve",
+    // Kadiv/Sekdiv memegang approve_own: menyetujui izin event yang mereka buat/kelola.
+    permission: ["attendance.approve", "attendance.approve_own"],
+    items: [
+      { title: "Pengajuan Izin", url: "/admin/permissions" },
+      {
+        title: "Kategori Izin",
+        url: "/admin/permissions/categories",
+        permission: "permission.categories.manage",
+      },
+    ],
   },
   {
     title: "Pelanggaran & SP",

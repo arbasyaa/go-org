@@ -1,6 +1,6 @@
 "use client"
 
-import { use } from "react"
+import { use, useMemo } from "react"
 import { PageHeader } from "@/components/page-header"
 import { ErrorState, LoadingState } from "@/components/page-states"
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
+import { divisionColorMap } from "@/lib/division-color"
 import { unwrapList } from "@/lib/format"
 import type { Division } from "@/lib/types"
 
@@ -20,27 +21,42 @@ export default function DivisionDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
-  const { data, loading, error } = useApi(async () => {
-    const list = unwrapList(
-      await apiRequest<Division[] | { items: Division[] }>("/divisions")
-    )
-    return list.find((d) => String(d.id) === id) ?? null
-  }, [id])
+  const { data, loading, error } = useApi(
+    async () =>
+      unwrapList(await apiRequest<Division[] | { items: Division[] }>("/divisions")),
+    [id]
+  )
+  const division = useMemo(
+    () => (data ?? []).find((d) => String(d.id) === id) ?? null,
+    [data, id]
+  )
+  // Warna dihitung dari daftar lengkap supaya sama dengan chip kalender.
+  const colors = useMemo(() => divisionColorMap(data ?? []), [data])
 
   return (
     <>
-      <PageHeader title="Divisi" crumbs={[{ label: data?.name ?? "Divisi" }]} />
+      <PageHeader
+        title="Divisi"
+        crumbs={[{ label: division?.name ?? "Divisi" }]}
+      />
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
         {loading ? <LoadingState rows={3} /> : null}
         {error ? <ErrorState message={error} /> : null}
-        {data ? (
+        {division ? (
           <Card>
             <CardHeader>
-              <CardTitle>{data.name}</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="size-3 rounded-full"
+                  style={{ backgroundColor: colors.get(division.id) }}
+                />
+                {division.name}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm whitespace-pre-wrap">
-                {data.description ?? "Tidak ada deskripsi"}
+                {division.description ?? "Tidak ada deskripsi"}
               </p>
             </CardContent>
           </Card>

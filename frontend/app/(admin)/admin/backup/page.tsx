@@ -97,8 +97,8 @@ export default function AdminBackupPage() {
             <CardTitle>Restore Backup</CardTitle>
             <CardDescription>
               Pulihkan database dan file storage dari arsip ZIP. Tabel yang
-              ikut di-backup akan dikosongkan lalu diisi ulang dari ZIP —
-              data lokal yang tidak ada di arsip ikut terhapus. File storage
+              ikut di-backup dikosongkan lalu diisi ulang dari ZIP. Data lokal
+              yang tidak ada di arsip ikut terhapus. File storage
               ditimpa per key, tidak dihapus massal.
             </CardDescription>
           </CardHeader>

@@ -50,6 +50,8 @@ export function FilePreview({ url, fileName, className }: FilePreviewProps) {
         src={url}
         alt={fileName}
         className={cn("mx-auto max-h-[60vh] w-full rounded-md border object-contain", className)}
+                    loading="lazy"
+                    decoding="async"
       />
     )
   }
@@ -155,7 +157,7 @@ function DocxPreview({ url, className }: { url: string; className?: string }) {
       <div
         ref={containerRef}
         className={cn(
-          "overflow-auto rounded-md border bg-white p-4 text-sm dark:bg-white",
+"overflow-auto rounded-md border bg-white p-4 text-sm ",
           status === "loading" && "invisible",
           status === "error" && "hidden"
         )}
@@ -271,7 +273,7 @@ function XlsxPreview({ url, className }: { url: string; className?: string }) {
               key={name}
               onClick={() => handleSheetChange(i)}
               className={cn(
-                "rounded-t-md px-3 py-1.5 text-xs font-medium transition-colors",
+"rounded-t-md px-3 py-1.5 text-xs font-medium transition-colors",
                 i === activeSheet
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -285,7 +287,7 @@ function XlsxPreview({ url, className }: { url: string; className?: string }) {
       <div
         ref={containerRef}
         className={cn(
-          "overflow-auto rounded-md border bg-white p-0 text-sm",
+"overflow-auto rounded-md border bg-white p-0 text-sm",
           status === "loading" && "invisible",
           status === "error" && "hidden"
         )}

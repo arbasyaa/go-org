@@ -16,6 +16,12 @@ import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import { formatDate } from "@/lib/format"
 import { eventBannerUrl } from "@/lib/event-banner"
+import {
+  isPermissionClosed,
+  permissionDeadlineLabel,
+} from "@/lib/permission-deadline"
+import { FADE_IN } from "@/lib/motion"
+import { EventAudienceBadge, eventOrganizerName } from "@/lib/event-audience"
 import type { Event } from "@/lib/types"
 
 const ATTENDANCE_LABELS: Record<string, string> = {
@@ -31,6 +37,8 @@ const PERMISSION_LABELS: Record<string, string> = {
   rejected: "Ditolak",
 }
 
+import { EventJoinButton } from "@/lib/event-audience"
+
 export default function EventDetailPage({
   params,
 }: {
@@ -43,11 +51,17 @@ export default function EventDetailPage({
   )
   const [izinOpen, setIzinOpen] = useState(false)
   const banner = event ? eventBannerUrl(event) : null
+  const organizer = event ? eventOrganizerName(event) : null
 
   const hasAttendance = Boolean(event?.my_attendance_status)
-  const canAttend = event?.status === "ongoing" && !hasAttendance
-  const canRequestIzin =
+  const canAttend =
+    event?.status === "ongoing" && !hasAttendance && event?.is_participant !== false
+  const izinClosed = isPermissionClosed(event?.start_time)
+  // Syarat dasar pengajuan izin; batas H-3 jam dicek terpisah supaya tombolnya
+  // bisa tampil nonaktif dengan alasan, bukan menghilang begitu saja.
+  const izinAvailable =
     Boolean(event?.allow_permission) &&
+    event?.is_participant !== false &&
     !hasAttendance &&
     (event?.status === "upcoming" || event?.status === "ongoing") &&
     event?.my_permission_request_status !== "pending" &&
@@ -77,13 +91,14 @@ export default function EventDetailPage({
         {error ? <ErrorState message={error} /> : null}
 
         {event ? (
-          <article className="overflow-hidden rounded-2xl border bg-card">
+          <article className={`${FADE_IN} overflow-hidden rounded-2xl border bg-card`}>
             <div className="relative aspect-[21/9] bg-muted sm:aspect-[2.5/1]">
               {banner ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={banner}
                   alt={event.title}
+                  decoding="async"
                   className="size-full object-cover"
                 />
               ) : (
@@ -104,6 +119,15 @@ export default function EventDetailPage({
                   </p>
                 </div>
                 <StatusBadge status={event.status} />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <EventAudienceBadge event={event} />
+                {organizer ? (
+                  <span className="text-xs text-muted-foreground">
+                    Penyelenggara: {organizer}
+                  </span>
+                ) : null}
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -141,6 +165,8 @@ export default function EventDetailPage({
                 </p>
               </div>
 
+              {event.link_url ? <EventJoinButton event={event} /> : null}
+
               <div className="rounded-xl border px-4 py-3 text-sm">
                 <p className="text-muted-foreground">Status absensi Anda</p>
                 <p className="mt-1 font-medium">
@@ -158,7 +184,7 @@ export default function EventDetailPage({
                 ) : null}
               </div>
 
-              {canAttend || canRequestIzin ? (
+              {canAttend || izinAvailable ? (
                 <div className="flex flex-wrap gap-2">
                   {canAttend ? (
                     <Button
@@ -168,14 +194,25 @@ export default function EventDetailPage({
                       Absen sekarang
                     </Button>
                   ) : null}
-                  {canRequestIzin ? (
-                    <Button
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                      onClick={() => setIzinOpen(true)}
-                    >
-                      Ajukan Izin
-                    </Button>
+                  {izinAvailable ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        disabled={izinClosed}
+                        onClick={() => setIzinOpen(true)}
+                      >
+                        Ajukan Izin
+                      </Button>
+                      {izinClosed ? (
+                        <p className="w-full text-xs text-muted-foreground">
+                          Pengajuan izin ditutup sejak{" "}
+                          {permissionDeadlineLabel(event.start_time)} — izin
+                          hanya bisa diajukan maksimal 3 jam sebelum event
+                          mulai.
+                        </p>
+                      ) : null}
+                    </>
                   ) : null}
                 </div>
               ) : null}
@@ -186,6 +223,7 @@ export default function EventDetailPage({
 
       <IzinRequestDialog
         eventId={Number(id)}
+        eventStartTime={event?.start_time}
         open={izinOpen}
         onOpenChange={setIzinOpen}
         onSuccess={() => void refetch()}

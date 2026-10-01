@@ -11,10 +11,12 @@ import {
   sortableHeader,
 } from "@/components/advanced-table"
 import { StatusBadge } from "@/components/status-badge"
+import { useAuth } from "@/components/providers/auth-provider"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -51,6 +53,10 @@ const ACTION_COPY: Record<
 }
 
 export default function AdminPermissionsPage() {
+  const { hasPermission } = useAuth()
+  // Kadiv/Sekdiv memegang approve_own: hanya event yang mereka kelola, dan
+  // tidak boleh menghapus pengajuan (itu khusus approver global).
+  const canApproveAll = hasPermission("attendance.approve")
   const { data, loading, error, setData } = useApi(async () => {
     const result = await apiRequest<
       PermissionRequest[] | { items: PermissionRequest[] }
@@ -136,28 +142,36 @@ export default function AdminPermissionsPage() {
         header: "Event",
       },
       {
+        id: "kategori",
+        accessorFn: (row) => row.category?.name ?? `Kategori #${row.category_id}`,
+        header: sortableHeader("Kategori"),
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.category?.name ?? "-"}</span>
+        ),
+      },
+      {
         id: "alasan",
         accessorKey: "reason",
-        header: "Alasan",
-        cell: ({ row }) => row.original.reason ?? "-",
+        header: "Keterangan",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">
+            {row.original.reason?.trim() ? row.original.reason : "-"}
+          </span>
+        ),
       },
       {
         id: "bukti",
         enableSorting: false,
         header: "Bukti",
         cell: ({ row }) =>
-          row.original.proof_url ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setPreviewProof(row.original)}
-            >
-              <EyeIcon data-icon="inline-start" />
-              Lihat
-            </Button>
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          ),
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPreviewProof(row.original)}
+          >
+            <EyeIcon data-icon="inline-start" />
+            Review
+          </Button>,
       },
       {
         id: "status",
@@ -198,21 +212,23 @@ export default function AdminPermissionsPage() {
                 </Button>
               </>
             ) : null}
-            <Button
-              size="sm"
-              variant="outline"
-              aria-label="Hapus pengajuan"
-              onClick={() =>
-                setPendingAction({ type: "delete", row: row.original })
-              }
-            >
-              <Trash2Icon />
-            </Button>
+            {canApproveAll ? (
+              <Button
+                size="sm"
+                variant="outline"
+                aria-label="Hapus pengajuan"
+                onClick={() =>
+                  setPendingAction({ type: "delete", row: row.original })
+                }
+              >
+                <Trash2Icon />
+              </Button>
+            ) : null}
           </div>
         ),
       },
     ],
-    []
+    [canApproveAll]
   )
 
   const actionCopy = pendingAction ? ACTION_COPY[pendingAction.type] : null
@@ -221,7 +237,7 @@ export default function AdminPermissionsPage() {
         pendingAction.row.user?.full_name ??
         pendingAction.row.user?.username ??
         `User #${pendingAction.row.user_id}`
-      } — ${pendingAction.row.event?.title ?? `Event #${pendingAction.row.event_id}`}`
+      }: ${pendingAction.row.event?.title ?? `Event #${pendingAction.row.event_id}`}`
     : ""
 
   return (
@@ -233,6 +249,13 @@ export default function AdminPermissionsPage() {
       ]}
       stats={stats}
     >
+      {!canApproveAll ? (
+        <p className="text-sm text-muted-foreground">
+          Anda menyetujui izin untuk event yang Anda kelola (pembuat atau divisi
+          penyelenggara). Pengajuan event lain hanya terlihat oleh approver
+          global.
+        </p>
+      ) : null}
       <AdvancedDataTable
         columns={columns}
         data={rows}
@@ -272,36 +295,107 @@ export default function AdminPermissionsPage() {
       >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Bukti Pendukung</DialogTitle>
+            <DialogTitle>Review Pengajuan Izin</DialogTitle>
+            <DialogDescription>
+              {previewProof
+                ? `${
+                    previewProof.user?.full_name ??
+                    previewProof.user?.username ??
+                    `User #${previewProof.user_id}`
+                  } · ${
+                    previewProof.event?.title ??
+                    `Event #${previewProof.event_id}`
+                  } · diajukan ${formatDate(previewProof.created_at)}`
+                : ""}
+            </DialogDescription>
           </DialogHeader>
-          {previewProof?.proof_url ? (
-            <div className="flex flex-col gap-3">
-              {/* Bukti bisa berupa PDF; kalau bukan gambar biarkan gagal render
-                  dan pakai tombol buka tab baru di bawah. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={storageUrl(previewProof.proof_url)}
-                alt="Bukti pendukung"
-                className="max-h-[60vh] w-full rounded-md border object-contain"
-              />
-              <Button
-                variant="outline"
-                className="w-fit"
-                render={
-                  <a
-                    href={storageUrl(previewProof.proof_url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  />
-                }
-              >
-                <ExternalLinkIcon data-icon="inline-start" />
-                Buka di tab baru
-              </Button>
+          {previewProof ? (
+            <div className="flex min-w-0 flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs text-muted-foreground">Kategori</p>
+                  <p className="text-sm font-medium">
+                    {previewProof.category?.name ?? "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Status</p>
+                  <StatusBadge status={previewProof.status} />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground">Keterangan</p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {previewProof.reason?.trim() || "Tidak ada keterangan"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs text-muted-foreground">Bukti gambar</p>
+                {previewProof.proof_url ? (
+                  <div className="mt-1 flex flex-col gap-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={storageUrl(previewProof.proof_url)}
+                      alt={`Bukti izin ${
+                        previewProof.user?.full_name ??
+                        previewProof.user?.username ??
+                        `user #${previewProof.user_id}`
+                      }`}
+                      className="max-h-[55vh] w-full rounded-md border object-contain"
+                    loading="lazy"
+                    decoding="async"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-fit"
+                      render={
+                        <a
+                          href={storageUrl(previewProof.proof_url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        />
+                      }
+                    >
+                      <ExternalLinkIcon data-icon="inline-start" />
+                      Buka di tab baru
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Tidak ada bukti gambar
+                  </p>
+                )}
+              </div>
+
+              {previewProof.status === "pending" ? (
+                <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+                  <Button
+                    onClick={() => {
+                      setPendingAction({ type: "approve", row: previewProof })
+                      setPreviewProof(null)
+                    }}
+                  >
+                    Terima
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setPendingAction({ type: "reject", row: previewProof })
+                      setPreviewProof(null)
+                    }}
+                  >
+                    Tolak
+                  </Button>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </DialogContent>
       </Dialog>
+
     </AdvancedResourcePage>
   )
 }

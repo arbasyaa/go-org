@@ -74,7 +74,7 @@ export default function AdminFinancePage() {
   )
   const categories = useApi(() =>
     apiRequest<FinanceCategory[] | { items: FinanceCategory[] }>(
-      "/finance_categories"
+"/finance_categories"
     ).then(unwrapList)
   )
   const wallets = useApi(() =>
@@ -398,8 +398,8 @@ export default function AdminFinancePage() {
             <span
               className={
                 t === "income"
-                  ? "rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                  : "rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                  ? "rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700"
+                  : "rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700"
               }
             >
               {t === "income" ? "Pemasukan" : "Pengeluaran"}
@@ -561,13 +561,13 @@ export default function AdminFinancePage() {
                   <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                     <p>
                       Masuk:{" "}
-                      <span className="text-emerald-600 dark:text-emerald-400">
+                      <span className="text-emerald-600 ">
                         {formatCurrency(w.total_income ?? 0)}
                       </span>
                     </p>
                     <p>
                       Keluar:{" "}
-                      <span className="text-red-600 dark:text-red-400">
+                      <span className="text-red-600 ">
                         {formatCurrency(w.total_expense ?? 0)}
                       </span>
                     </p>
