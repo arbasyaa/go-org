@@ -8,6 +8,7 @@ import {
   MapPinIcon,
 } from "lucide-react"
 import { IzinRequestDialog } from "@/components/member/izin-request-dialog"
+import { FEATURES } from "@/lib/features"
 import { PageHeader } from "@/components/page-header"
 import { ErrorState, LoadingState } from "@/components/page-states"
 import { StatusBadge } from "@/components/status-badge"
@@ -53,9 +54,18 @@ export default function EventDetailPage({
   const banner = event ? eventBannerUrl(event) : null
   const organizer = event ? eventOrganizerName(event) : null
 
-  const hasAttendance = Boolean(event?.my_attendance_status)
+  // `present`/`permitted` = sudah tercatat dan terkunci. `rejected` bukan:
+  // izin yang ditolak boleh diajukan ulang (aturan yang sama ditegakkan
+  // backend di AttendanceService.Submit & PermissionRequestService.Create).
+  const attendanceStatus = event?.my_attendance_status
+  const hasAttendance = attendanceStatus === "present" || attendanceStatus === "permitted"
+  // Absensi mandiri dimatikan sementara (lib/features.ts) — tombolnya hilang,
+  // alur izin tetap jalan.
   const canAttend =
-    event?.status === "ongoing" && !hasAttendance && event?.is_participant !== false
+    FEATURES.attendance &&
+    event?.status === "ongoing" &&
+    !hasAttendance &&
+    event?.is_participant !== false
   const izinClosed = isPermissionClosed(event?.start_time)
   // Syarat dasar pengajuan izin; batas H-3 jam dicek terpisah supaya tombolnya
   // bisa tampil nonaktif dengan alasan, bukan menghilang begitu saja.
@@ -167,22 +177,33 @@ export default function EventDetailPage({
 
               {event.link_url ? <EventJoinButton event={event} /> : null}
 
-              <div className="rounded-xl border px-4 py-3 text-sm">
-                <p className="text-muted-foreground">Status absensi Anda</p>
-                <p className="mt-1 font-medium">
-                  {event.my_attendance_status
-                    ? ATTENDANCE_LABELS[event.my_attendance_status] ??
-                      event.my_attendance_status
-                    : "Belum absen"}
-                </p>
-                {event.my_permission_request_status ? (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Pengajuan izin:{" "}
-                    {PERMISSION_LABELS[event.my_permission_request_status] ??
-                      event.my_permission_request_status}
+              {FEATURES.attendance || event.my_permission_request_status ? (
+                <div className="rounded-xl border px-4 py-3 text-sm">
+                  <p className="text-muted-foreground">
+                    {FEATURES.attendance
+                      ? "Status absensi Anda"
+                      : "Status pengajuan izin"}
                   </p>
-                ) : null}
-              </div>
+                  <p className="mt-1 font-medium">
+                    {FEATURES.attendance
+                      ? event.my_attendance_status
+                        ? (ATTENDANCE_LABELS[event.my_attendance_status] ??
+                          event.my_attendance_status)
+                        : "Belum absen"
+                      : (PERMISSION_LABELS[
+                          event.my_permission_request_status ?? ""
+                        ] ?? event.my_permission_request_status)}
+                  </p>
+                  {FEATURES.attendance &&
+                  event.my_permission_request_status ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Pengajuan izin:{" "}
+                      {PERMISSION_LABELS[event.my_permission_request_status] ??
+                        event.my_permission_request_status}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
 
               {canAttend || izinAvailable ? (
                 <div className="flex flex-wrap gap-2">

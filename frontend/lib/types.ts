@@ -68,7 +68,7 @@ export interface Event {
   division_id?: number | null
   division?: Division | string | null
   /** Divisi pembuat event — penentu warna chip di kalender. */
-  created_by_id?: number
+  created_by_id?: number | null
   created_by_division_id?: number | null
   created_by_division_name?: string | null
   location?: string | null
@@ -123,7 +123,10 @@ export interface PermissionRequest {
   reason?: string | null
   proof_url?: string | null
   status: "pending" | "approved" | "rejected" | string
-  note?: string | null
+  /** Catatan approver saat menyetujui/menolak (kolom `review_note` di API). */
+  review_note?: string | null
+  reviewed_at?: string | null
+  reviewed_by_id?: number | null
   created_at?: string
   event?: Event
   user?: User

@@ -18,6 +18,7 @@ import {
   UsersIcon,
   WalletIcon,
 } from "lucide-react"
+import { FEATURES } from "@/lib/features"
 import type { NavItem } from "@/lib/types"
 
 export const memberNavItems: NavItem[] = [
@@ -141,12 +142,18 @@ export const adminNavItems: NavItem[] = [
     icon: <MegaphoneIcon className="size-4" />,
     permission: "announcement.create",
   },
-  {
-    title: "Keuangan",
-    url: "/admin/finance",
-    icon: <WalletIcon className="size-4" />,
-    permission: "finance.view",
-  },
+  // Keuangan sedang dimatikan (lib/features.ts) — itemnya ikut hilang dari
+  // sidebar, tapi halaman, tabel, dan datanya tetap utuh.
+  ...(FEATURES.finance
+    ? [
+        {
+          title: "Keuangan",
+          url: "/admin/finance",
+          icon: <WalletIcon className="size-4" />,
+          permission: "finance.view",
+        },
+      ]
+    : []),
   {
     title: "Penyimpanan Cloud",
     url: "/admin/storage",

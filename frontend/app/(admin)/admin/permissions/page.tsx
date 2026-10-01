@@ -64,6 +64,7 @@ export default function AdminPermissionsPage() {
     return unwrapList(result)
   })
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
+  const [note, setNote] = useState("")
   const [processing, setProcessing] = useState(false)
   const [previewProof, setPreviewProof] = useState<PermissionRequest | null>(
     null
@@ -103,7 +104,7 @@ export default function AdminPermissionsPage() {
       } else {
         await apiRequest(`/attendance/permission_requests/${row.id}`, {
           method: "PUT",
-          body: { action: type },
+          body: { action: type, note: note.trim() },
         })
         setData(
           (prev) =>
@@ -112,6 +113,7 @@ export default function AdminPermissionsPage() {
                 ? {
                     ...item,
                     status: type === "approve" ? "approved" : "rejected",
+                    review_note: note.trim(),
                   }
                 : item
             ) ?? null
@@ -121,12 +123,13 @@ export default function AdminPermissionsPage() {
         )
       }
       setPendingAction(null)
+      setNote("")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal memproses")
     } finally {
       setProcessing(false)
     }
-  }, [pendingAction, setData])
+  }, [pendingAction, note, setData])
 
   const columns = useMemo<ColumnDef<PermissionRequest>[]>(
     () => [
@@ -284,6 +287,22 @@ export default function AdminPermissionsPage() {
         confirmLabel={actionCopy?.confirmLabel}
         destructive={actionCopy?.destructive}
         confirming={processing}
+        // Hapus tidak butuh catatan; setujui/tolak boleh diberi alasan yang
+        // langsung terbaca pengaju di halaman "Perizinan Saya".
+        noteLabel={
+          pendingAction?.type === "reject"
+            ? "Alasan penolakan (opsional)"
+            : "Catatan untuk pengaju (opsional)"
+        }
+        notePlaceholder={
+          pendingAction?.type === "reject"
+            ? "mis. bukti kurang jelas, ajukan ulang dengan surat keterangan"
+            : "mis. disetujui, lain kali lampirkan surat dokter"
+        }
+        note={note}
+        onNoteChange={
+          pendingAction?.type === "delete" ? undefined : setNote
+        }
         onConfirm={runPendingAction}
       />
 

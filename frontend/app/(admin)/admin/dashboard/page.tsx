@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { ChartConfig } from "@/components/ui/chart"
+import { FEATURES } from "@/lib/features"
 import { FADE_IN } from "@/lib/motion"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
@@ -71,7 +72,7 @@ export default function AdminDashboardPage() {
   const canViolations = hasPermission("violations.view")
   const canLetters = hasPermission("letters.view")
   const canAnnouncements = hasPermission("announcement.create")
-  const canFinance = hasPermission("finance.view")
+  const canFinance = FEATURES.finance && hasPermission("finance.view")
   const users = useApi(async () => {
     if (!canUsers) return [] as User[]
     return apiRequest<User[] | { items: User[] }>("/users").then(unwrapList)

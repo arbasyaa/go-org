@@ -125,9 +125,9 @@ export default function MyPermissionsPage() {
                   <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                     {item.reason?.trim() || "Tanpa keterangan"}
                   </p>
-                  {item.note ? (
+                  {item.review_note ? (
                     <p className="mt-2 rounded-xl bg-muted/50 px-3 py-2 text-xs">
-                      Catatan admin: {item.note}
+                      Catatan admin: {item.review_note}
                     </p>
                   ) : null}
                 </div>
