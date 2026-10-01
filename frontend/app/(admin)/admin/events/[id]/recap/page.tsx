@@ -143,7 +143,10 @@ export default function EventRecapPage({
         error={error}
         emptyMessage="Belum ada data absensi"
         searchPlaceholder="Cari nama, status..."
-        getRowId={(row) => String(row.id)}
+        // Baris rekap tidak punya `id` (gabungan roster + absensi); kunci
+        // uniknya user_id. Tanpa ini semua baris memakai "undefined" dan React
+        // melempar peringatan duplicate key.
+        getRowId={(row) => String(row.user_id ?? row.user?.id ?? "")}
       />
     </AdvancedResourcePage>
   )

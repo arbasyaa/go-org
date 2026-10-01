@@ -87,7 +87,14 @@ export default function AdminBackupPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button render={<a href={`${getApiBase()}/backup`} download />}>
+            {/*
+              href memakai path proxy relatif, bukan getApiBase(): nilainya beda
+              di server (URL internal) dan browser (proxy same-origin), dan React
+              tidak menambal atribut yang beda saat hidrasi — di production link
+              akan menunjuk host internal. Rewrite /api/backend sudah aktif di
+              semua mode, dan unduhan same-origin tetap membawa cookie `token`.
+            */}
+            <Button render={<a href="/api/backend/backup" download />}>
               Download Backup ZIP
             </Button>
           </CardContent>

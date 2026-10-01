@@ -21,6 +21,10 @@ export function PageHeader({
 }) {
   return (
     <header className="flex h-16 shrink-0 items-center gap-2">
+      {/* Judul halaman tampil sebagai breadcrumb (span), sehingga dokumen tanpa
+          heading. h1 sr-only menjaga struktur/landmark (WCAG 1.3.1) tanpa
+          mengubah tampilan. */}
+      <h1 className="sr-only">{title}</h1>
       <div className="flex items-center gap-2 px-4">
         <SidebarTrigger className="-ml-1" />
         <Separator

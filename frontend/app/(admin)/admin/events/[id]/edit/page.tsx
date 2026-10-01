@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { EventForm } from "@/components/event-form"
-import { apiRequest } from "@/lib/api"
+import { serverGet } from "@/lib/server-api"
 import type { Event } from "@/lib/types"
 
 export default async function EditEventPage({
@@ -9,12 +9,11 @@ export default async function EditEventPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  let event: Event
-  try {
-    event = await apiRequest<Event>(`/events/${id}`)
-  } catch {
-    notFound()
-  }
+  // serverGet mengirim cookie `token` milik user. apiRequest tidak bisa dipakai
+  // di Server Component: token-nya hanya ada di browser, jadi backend menjawab
+  // 401 dan halaman ini selalu 404.
+  const event = await serverGet<Event>(`/events/${id}`)
+  if (!event) notFound()
 
   return (
     <EventForm
