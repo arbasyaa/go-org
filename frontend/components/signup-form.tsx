@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { register } from "@/lib/auth"
 import { ApiError } from "@/lib/api"
 import { useSettings } from "@/hooks/use-settings"
+import { DEFAULT_SITE_NAME } from "@/lib/brand"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -21,7 +22,7 @@ export function SignupForm({
   ...props
 }: React.ComponentProps<"form">) {
   const { settings } = useSettings()
-  const siteName = settings?.web_name || "MyOrg"
+  const siteName = settings?.web_name || DEFAULT_SITE_NAME
   const [form, setForm] = useState({
     username: "",
     email: "",

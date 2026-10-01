@@ -24,8 +24,12 @@ import { unwrapList } from "@/lib/format"
 import type { LetterCategory } from "@/lib/types"
 
 const DEFAULT_TEMPLATE = "{number:3}/{code}/{month_roman}/{year}"
+// ponytail: contoh template memakai nama panjang sebagai segmen literal dan
+// belum ada preset singkatan. ceiling: admin mengedit sendiri template-nya.
+// upgrade: saat penomoran surat dipakai produksi atau diminta versi pendek
+// (mis. PJ) — lihat PONYTAIL-DEBT.md.
 const EXAMPLE_TEMPLATE =
-  "{number:3}/{code}/{unit}/Permikomnas Jateng/{month_roman}/{year}"
+  "{number:3}/{code}/{unit}/Permikomnas Jawa Tengah/{month_roman}/{year}"
 
 const emptyForm = {
   name: "",
@@ -297,7 +301,7 @@ export default function LetterCategoriesPage() {
               </p>
               <p>
                 <span className="font-medium">Literal:</span> teks bebas di
-                template, mis. Permikomnas Jateng
+                template, mis. Permikomnas Jawa Tengah
               </p>
               <p>
                 Contoh:{" "}
@@ -310,7 +314,7 @@ export default function LetterCategoriesPage() {
                 >
                   {EXAMPLE_TEMPLATE}
                 </button>{" "}
-                → 001/SPm-i/PAN-Stuband/Permikomnas Jateng/VII/2026
+                → 001/SPm-i/PAN-Stuband/Permikomnas Jawa Tengah/VII/2026
               </p>
             </div>
           </Field>

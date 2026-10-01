@@ -63,7 +63,7 @@ const fontVariables = [
 ].join(" ")
 
 export const metadata: Metadata = {
-  title: "Permikomnas Jateng",
+  title: "Permikomnas Jawa Tengah",
   description: "Sistem Informasi Manajemen Organisasi",
 }
 

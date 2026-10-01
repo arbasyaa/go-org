@@ -8,6 +8,7 @@ import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useSettings } from "@/hooks/use-settings"
+import { DEFAULT_LOGO_URL, DEFAULT_SITE_NAME } from "@/lib/brand"
 import {
   Sidebar,
   SidebarContent,
@@ -20,7 +21,6 @@ import {
 import { hasPermission } from "@/lib/auth"
 import { storageUrl } from "@/lib/storage-url"
 import type { NavItem } from "@/lib/types"
-import { Building2Icon } from "lucide-react"
 
 function filterNavItems(items: NavItem[], permissions: string[]): NavItem[] {
   return items
@@ -47,8 +47,8 @@ export function AppSidebar({
   const pathname = usePathname()
   const { user, permissions } = useAuth()
   const { settings } = useSettings()
-  const siteName = settings?.web_name || "MyOrg"
-  const logoUrl = settings?.logo_url ? storageUrl(settings.logo_url) : null
+  const siteName = settings?.web_name || DEFAULT_SITE_NAME
+  const logoUrl = settings?.logo_url ? storageUrl(settings.logo_url) : DEFAULT_LOGO_URL
 
   const filteredMain = filterNavItems(navItems, permissions)
   const filteredSecondary = filterNavItems(secondaryItems, permissions)
@@ -74,19 +74,13 @@ export function AppSidebar({
                 />
               }
             >
-              {logoUrl ? (
-                <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary">
-                  <img
-                    src={logoUrl}
-                    alt={siteName}
-                    className="size-full object-contain"
-                  />
-                </div>
-              ) : (
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Building2Icon className="size-4" />
-                </div>
-              )}
+              <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg bg-background ring-1 ring-sidebar-border">
+                <img
+                  src={logoUrl}
+                  alt={siteName}
+                  className="size-full object-contain"
+                />
+              </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{siteName}</span>
                 <span className="truncate text-xs">

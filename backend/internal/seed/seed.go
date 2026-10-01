@@ -153,7 +153,7 @@ func seedAll(ctx context.Context) error {
 	}
 
 	if _, err := orm.Create(ctx, &models.OrganizationSettings{
-		WebName:                      "Permikomnas Jateng",
+		WebName:                      "Permikomnas Jawa Tengah",
 		Theme:                        "system",
 		AllowSelfRegister:            false,
 		AllowCrossDivisionEventsView: false,

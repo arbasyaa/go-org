@@ -22,7 +22,7 @@ export default function AuthLayout({
       <div className="relative hidden overflow-hidden bg-muted lg:block">
         <Image
           src={allPengurus}
-          alt="Pengurus Permikomnas Jateng"
+          alt="Pengurus Permikomnas Jawa Tengah"
           fill
           priority
           sizes="50vw"

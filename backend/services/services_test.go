@@ -32,46 +32,46 @@ func TestFormatLetterNumberUnpadded(t *testing.T) {
 }
 
 func TestFormatLetterNumberZeroPadAndSegment(t *testing.T) {
-	tmpl := "{number:3}/{code}/{unit}/Permikomnas Jateng/{month_roman}/{year}"
+	tmpl := "{number:3}/{code}/{unit}/Permikomnas Jawa Tengah/{month_roman}/{year}"
 	date := time.Date(2026, 7, 25, 0, 0, 0, 0, time.UTC)
 	extras := map[string]string{"unit": "PAN-Stuband"}
 	got, err := FormatLetterNumber(tmpl, 1, "SPm-i", date, extras, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "001/SPm-i/PAN-Stuband/Permikomnas Jateng/VII/2026"
+	want := "001/SPm-i/PAN-Stuband/Permikomnas Jawa Tengah/VII/2026"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}
 }
 
 func TestFormatLetterNumberMissingSegmentError(t *testing.T) {
-	tmpl := "{number:3}/{code}/{unit}/Permikomnas Jateng/{month_roman}/{year}"
+	tmpl := "{number:3}/{code}/{unit}/Permikomnas Jawa Tengah/{month_roman}/{year}"
 	date := time.Date(2026, 7, 25, 0, 0, 0, 0, time.UTC)
 	got, err := FormatLetterNumber(tmpl, 1, "SPm-i", date, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Missing segment should not error; double separators should collapse
-	if got != "001/SPm-i/Permikomnas Jateng/VII/2026" {
-		t.Fatalf("got %q want %q", got, "001/SPm-i/Permikomnas Jateng/VII/2026")
+	if got != "001/SPm-i/Permikomnas Jawa Tengah/VII/2026" {
+		t.Fatalf("got %q want %q", got, "001/SPm-i/Permikomnas Jawa Tengah/VII/2026")
 	}
 }
 
 func TestFormatLetterNumberCollapseDoubleSlash(t *testing.T) {
-	tmpl := "{number:3}/{code}{tujuan}/{unit}/Permikomnas Jateng/{month_roman}/{year}"
+	tmpl := "{number:3}/{code}{tujuan}/{unit}/Permikomnas Jawa Tengah/{month_roman}/{year}"
 	date := time.Date(2026, 7, 25, 0, 0, 0, 0, time.UTC)
 	got, err := FormatLetterNumber(tmpl, 1, "SPm-i", date, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != "001/SPm-i/Permikomnas Jateng/VII/2026" {
-		t.Fatalf("got %q want %q", got, "001/SPm-i/Permikomnas Jateng/VII/2026")
+	if got != "001/SPm-i/Permikomnas Jawa Tengah/VII/2026" {
+		t.Fatalf("got %q want %q", got, "001/SPm-i/Permikomnas Jawa Tengah/VII/2026")
 	}
 }
 
 func TestFormatLetterNumberPreviewMissingSegment(t *testing.T) {
-	tmpl := "{number:3}/{code}/{unit}/Permikomnas Jateng/{month_roman}/{year}"
+	tmpl := "{number:3}/{code}/{unit}/Permikomnas Jawa Tengah/{month_roman}/{year}"
 	date := time.Date(2026, 7, 25, 0, 0, 0, 0, time.UTC)
 	got, err := FormatLetterNumber(tmpl, 1, "SPm-i", date, nil, true)
 	if err != nil {
@@ -83,7 +83,7 @@ func TestFormatLetterNumberPreviewMissingSegment(t *testing.T) {
 }
 
 func TestExtractCustomPlaceholders(t *testing.T) {
-	tmpl := "{number:3}/{code}/{unit}/Permikomnas Jateng/{tujuan}/{month_roman}/{year}"
+	tmpl := "{number:3}/{code}/{unit}/Permikomnas Jawa Tengah/{tujuan}/{month_roman}/{year}"
 	got := ExtractCustomPlaceholders(tmpl)
 	want := []string{"unit", "tujuan"}
 	if len(got) != len(want) {
