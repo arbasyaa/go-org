@@ -59,7 +59,7 @@ Di dalam frontend, pengalaman dipisah dengan **route groups** (bukan dua app ter
 
 | Group | URL | Shell |
 |---|---|---|
-| `(auth)` | `/login`, `/register`, `/recruitment/:slug` | Layout auth (blok login-02 / signup-02) |
+| `(auth)` | `/login`, `/uhuyorangsenang` (halaman daftar, sengaja tidak dipublikasikan), `/recruitment/:slug` | Layout auth (blok login-02 / signup-02) |
 | `(member)` | `/dashboard`, `/profile`, `/events`, … | Sidebar (sidebar-08) + menu anggota |
 | `(admin)` | `/admin/...` | Sidebar yang sama; item menu difilter permission |
 
@@ -107,7 +107,7 @@ MyOrg-v2/
     settings.go
   frontend/
     app/
-      (auth)/login|register|recruitment/...
+      (auth)/login|uhuyorangsenang|recruitment/...
       (member)/dashboard|profile|events|...
       (admin)/admin/...
     components/          # shadcn ui + forms + app-sidebar
@@ -523,6 +523,7 @@ backups/{date}-{id}.zip
 | UI kit | shadcn/ui preset `base-mira` saja |
 | Theme settings | Selalu terang (putih). Dark mode dihapus: token `.dark` dibuang, `forcedTheme="light"`, `ThemeSync` dihapus. Varian `dark:` bawaan komponen shadcn tetap terdefinisi tapi inert (`.dark` tidak pernah dipasang) |
 | Login identifier | Username utama; email fallback |
+| Pendaftaran mandiri | Halaman daftar ada di `/uhuyorangsenang`, **bukan** `/register`, dan tidak ada tautan ke sana dari `/login` — pendaftaran seharusnya lewat Sekretaris Wilayah. Gerbang sebenarnya tetap `allow_self_register` di settings: kalau mati, `POST /auth/register` ditolak walau alamatnya diketahui |
 | Auth | JWT + httpOnly cookie (+ token di body) |
 | Dual role | System admin + custom Role/Permission |
 | File upload | MinIO (S3) + URL di DB |
