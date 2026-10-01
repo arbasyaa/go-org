@@ -323,7 +323,7 @@ function RequirePermission(ctx, code):
 
 Permission awal: `settings.manage`, `users.view/create/edit/delete/import`, `roles.view/create/edit/delete`, `events.view/create/edit/delete`, `attendance.submit/approve/approve_own`, `divisions.view/create/edit/delete`, `permission.submit`, `permission.categories.manage`, `violations.view/manage`, `recruitment.manage`, `letters.view/manage`, `announcement.create`, `finance.view/create/edit/delete/categories/manage`, `finance.wallets.manage`, `storage.view/upload/delete/manage`.
 
-**Approval izin dua tingkat:** `attendance.approve` = semua event (Admin, PH); `attendance.approve_own` = hanya event yang dikelola (pembuat atau divisi penyelenggara). Seed menyebarkannya otomatis: pemegang `events.create` (PH/Kadiv/Sekdiv) mendapat `approve_own`, pemegang `attendance.approve` mendapat `permission.categories.manage`.
+**Approval izin dua tingkat:** `attendance.approve` = semua event (Admin, PH); `attendance.approve_own` = hanya event yang dikelola (pembuat atau divisi penyelenggara). Seed menyebarkannya otomatis: pemegang `events.create` (PH/Kadiv/Sekdiv/KOORDA) mendapat `approve_own`, pemegang `attendance.approve` mendapat `permission.categories.manage`.
 
 Role **Bendahara** seed: semua `finance.*`.
 
@@ -437,7 +437,8 @@ Parse CSV/XLSX → validasi → bulk insert → email async.
 - 1 row `organization_settings` (`theme: light`).
 - Contoh `letter_categories` (`UND`, `SK`).
 - Divisi demo.
-- `SyncMissingSeedData` memberi `events.create/edit/delete` ke role **Kadiv** & **Sekdiv** (idempoten, hanya kalau role-nya ada) — pengurus divisi mengelola kegiatan sendiri tanpa membuka panel admin penuh.
+- `SyncMissingSeedData` memberi role **Kadiv**, **Sekdiv**, dan **KOORDA** set akses agenda yang sama (`events.view/view_all/create/edit/delete` + `attendance.submit/approve_own` + `permission.submit`) — idempoten, role yang belum ada dilewati. Pengurus divisi & koordinator daerah mengelola agendanya sendiri tanpa membuka panel admin penuh.
+- `announcement.create` di-ensure untuk **PH**, **Kadiv**, **Sekdiv** (Admin sudah otomatis lewat `SyncMissingPermissions`). KOORDA tidak termasuk: pengumuman tetap milik pengurus harian & pengurus divisi.
 
 **Production:** password admin kuat via env; tolak default dev.
 

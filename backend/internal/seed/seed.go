@@ -262,7 +262,7 @@ func grantIfMissing(ctx context.Context, roleID, permissionID int64) error {
 // SyncMissingSeedData ensures default reference data exists on existing databases.
 // grantIfMissingRolePermission memberi satu permission ke role berdasarkan nama,
 // kalau role-nya ada dan belum punya. Dipakai untuk default permission operasional
-// (Kadiv/Sekdiv mengelola event divisinya) di instalasi baru — di DB yang sudah
+// (Kadiv/Sekdiv/KOORDA mengelola agenda event) di instalasi baru — di DB yang sudah
 // jalan, role-nya dibuat manual lewat /admin/roles sehingga tidak tersentuh.
 func grantIfMissingRolePermission(ctx context.Context, roleName, code string) error {
 	role, err := orm.Objects[models.Role](ctx).Filter("name", roleName).First()
@@ -283,12 +283,25 @@ func grantIfMissingRolePermission(ctx context.Context, roleName, code string) er
 }
 
 func SyncMissingSeedData(ctx context.Context) error {
-	// Kadiv/Sekdiv mengelola event divisinya sendiri (DESIGN §5).
-	for _, roleName := range []string{"Kadiv", "Sekdiv"} {
-		for _, code := range []string{"events.create", "events.edit", "events.delete"} {
+	// Pengurus divisi (Kadiv/Sekdiv) dan Koordinator Daerah mengelola agenda sendiri
+	// dengan cakupan yang sama: lihat semua event, buat/ubah/hapus, dan setujui izin
+	// untuk event yang mereka buat (DESIGN §5). Role yang belum ada dilewati.
+	for _, roleName := range []string{"Kadiv", "Sekdiv", "KOORDA"} {
+		for _, code := range []string{
+			"events.view", "events.view_all",
+			"events.create", "events.edit", "events.delete",
+			"attendance.submit", "attendance.approve_own",
+			"permission.submit",
+		} {
 			if err := grantIfMissingRolePermission(ctx, roleName, code); err != nil {
 				return err
 			}
+		}
+	}
+	// Pengumuman: pengurus harian dan pengurus divisi boleh mengumumkan (DESIGN §7).
+	for _, roleName := range []string{"PH", "Kadiv", "Sekdiv"} {
+		if err := grantIfMissingRolePermission(ctx, roleName, "announcement.create"); err != nil {
+			return err
 		}
 	}
 	count, _ := orm.Objects[models.LetterCategory](ctx).Filter("code", "SM-IN").Count()
