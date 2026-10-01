@@ -39,7 +39,7 @@ services:
     expose:
       - "3000"
     depends_on:
-      gokil:
+      gokilbgt:
         condition: service_healthy
     healthcheck:
       test:
