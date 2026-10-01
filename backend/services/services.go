@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"backend/internal/auth"
+	"backend/internal/imageutil"
 	"backend/internal/letterutil"
 	"backend/internal/storageutil"
 	"backend/internal/timeutil"
@@ -156,6 +157,45 @@ func (AuthService) Register(ctx context.Context, username, email, password, full
 }
 
 type UserService struct{}
+
+// AudienceCatalog mengembalikan divisi + role beserta jumlah anggota tiap
+// pilihan, dipakai form cakupan event supaya bisa menampilkan
+// "Divisi PH (12 anggota)" tanpa hitungan per opsi di frontend.
+func (UserService) AudienceCatalog(ctx context.Context) (map[string]any, error) {
+	users, err := orm.Objects[models.User](ctx).Filter("status", "active").All()
+	if err != nil {
+		return nil, err
+	}
+	divisions, err := orm.Objects[models.Division](ctx).All()
+	if err != nil {
+		return nil, err
+	}
+	roles, err := orm.Objects[models.Role](ctx).All()
+	if err != nil {
+		return nil, err
+	}
+	divisionCounts := map[int64]int{}
+	roleCounts := map[int64]int{}
+	for _, u := range users {
+		divisionCounts[u.DivisionID]++
+		roleCounts[u.RoleID]++
+	}
+	divisionItems := make([]map[string]any, 0, len(divisions))
+	for _, d := range divisions {
+		divisionItems = append(divisionItems, map[string]any{
+			"id": d.ID, "name": d.Name, "member_count": divisionCounts[d.ID],
+		})
+	}
+	roleItems := make([]map[string]any, 0, len(roles))
+	for _, r := range roles {
+		roleItems = append(roleItems, map[string]any{
+			"id": r.ID, "name": r.Name, "member_count": roleCounts[r.ID],
+		})
+	}
+	return map[string]any{
+		"divisions": divisionItems, "roles": roleItems, "member_count": len(users),
+	}, nil
+}
 
 func (UserService) List(ctx context.Context, status string) ([]*models.User, error) {
 	qs := orm.Objects[models.User](ctx)
@@ -336,6 +376,9 @@ func (RoleService) Update(ctx context.Context, id int64, values map[string]any) 
 }
 
 func (RoleService) Delete(ctx context.Context, id int64) error {
+	if _, err := orm.GetByID[models.Role](ctx, id); err != nil {
+		return ErrNotFound
+	}
 	count, err := orm.Objects[models.User](ctx).Filter("role_id", id).Count()
 	if err != nil {
 		return err
@@ -387,16 +430,55 @@ func (DivisionService) List(ctx context.Context) ([]*models.Division, error) {
 	return orm.Objects[models.Division](ctx).OrderBy("name").All()
 }
 
-func (DivisionService) Create(ctx context.Context, name, description string) (*models.Division, error) {
-	return orm.Create(ctx, &models.Division{Name: name, Description: description})
+// divisionColors membatasi warna divisi ke token CSS yang tersedia
+// (--division-1..6). Nilai dari DB ikut masuk ke style, jadi input admin tidak
+// boleh menyuntik nilai warna sembarang (juga melindungi kontras chip).
+var divisionColors = map[string]bool{
+	"":           true, // otomatis: dibagi berurutan oleh frontend
+	"division-1": true,
+	"division-2": true,
+	"division-3": true,
+	"division-4": true,
+	"division-5": true,
+	"division-6": true,
+	"division-7": true,
+	"division-8": true,
+}
+
+func (DivisionService) Create(ctx context.Context, name, description, color string) (*models.Division, error) {
+	color = strings.TrimSpace(color)
+	if !divisionColors[color] {
+		return nil, fmt.Errorf("warna divisi tidak dikenal")
+	}
+	return orm.Create(ctx, &models.Division{Name: name, Description: description, Color: color})
 }
 
 func (DivisionService) Update(ctx context.Context, id int64, values map[string]any) (*models.Division, error) {
+	if raw, ok := values["color"]; ok {
+		color, _ := raw.(string)
+		color = strings.TrimSpace(color)
+		if !divisionColors[color] {
+			return nil, fmt.Errorf("warna divisi tidak dikenal")
+		}
+		values["color"] = color
+	}
 	return orm.UpdateByID[models.Division](ctx, id, values)
 }
 
 func (DivisionService) Delete(ctx context.Context, id int64) error {
-	_, err := orm.DeleteByID[models.Division](ctx, id)
+	// Tanpa guard ini, FK user/event/announcement melempar SQLSTATE 23503 yang
+	// bocor jadi 500 tanpa sebab yang bisa dibaca admin.
+	if _, err := orm.GetByID[models.Division](ctx, id); err != nil {
+		return ErrNotFound
+	}
+	count, err := orm.Objects[models.User](ctx).Filter("division_id", id).Count()
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("divisi masih dipakai oleh %d anggota. Pindahkan atau hapus anggotanya dahulu.", count)
+	}
+	_, err = orm.DeleteByID[models.Division](ctx, id)
 	return err
 }
 
@@ -412,6 +494,12 @@ func computeEventStatus(start, end, now time.Time) string {
 	return "ongoing"
 }
 
+// endOfDay: event tanpa waktu selesai dianggap berakhir di penghujung hari
+// mulainya, supaya status, izin, dan absensi tetap punya batas waktu.
+func endOfDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, t.Location())
+}
+
 func (EventService) syncEventStatus(ctx context.Context, e *models.Event) (*models.Event, error) {
 	if e.Status == "cancelled" {
 		return e, nil
@@ -423,10 +511,14 @@ func (EventService) syncEventStatus(ctx context.Context, e *models.Event) (*mode
 	return orm.UpdateByID[models.Event](ctx, e.ID, map[string]any{"status": next})
 }
 
+// ListVisible mengembalikan event yang cakupannya memuat user. Bukan peserta =
+// tidak lihat sama sekali; events.view_all (mis. Kadiv) tetap lihat semua.
+//
+// Status tidak di-transisi di sini: dulu tiap GET ikut memuat semua event dan
+// menulis UPDATE (write di jalur baca, makin berat saat data tumbuh). Cron
+// `event_status_transition` (1 menit, run-on-start) yang menanganinya, dan
+// GET /events/:id tetap menyinkronkan satu event saja.
 func (EventService) ListVisible(ctx context.Context, user *auth.User, canViewAll bool) ([]*models.Event, error) {
-	if err := (EventService{}).TransitionStatuses(ctx); err != nil {
-		return nil, err
-	}
 	all, err := orm.Objects[models.Event](ctx).OrderBy("-start_time").All()
 	if err != nil {
 		return nil, err
@@ -434,21 +526,40 @@ func (EventService) ListVisible(ctx context.Context, user *auth.User, canViewAll
 	if canViewAll {
 		return all, nil
 	}
-	settings, _ := orm.Objects[models.OrganizationSettings](ctx).First()
-	if settings != nil && settings.AllowCrossDivisionEventsView {
-		return all, nil
+	targets, err := loadTargetSets(ctx)
+	if err != nil {
+		return nil, err
 	}
 	u, err := orm.GetByID[models.User](ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
-	var visible []*models.Event
+	visible := make([]*models.Event, 0, len(all))
 	for _, e := range all {
-		if e.DivisionID == nil || *e.DivisionID == u.DivisionID {
+		if eventIncludesUser(e, targets, u) {
 			visible = append(visible, e)
 		}
 	}
 	return visible, nil
+}
+
+// eventIncludesUser: pengecekan cakupan dari data yang sudah dimuat, supaya
+// daftar event tidak menembak query per event.
+func eventIncludesUser(e *models.Event, targets targetSets, u *models.User) bool {
+	if e.Audience == "all" {
+		return true
+	}
+	for _, divisionID := range targets.divisions[e.ID] {
+		if divisionID == u.DivisionID {
+			return true
+		}
+	}
+	for _, roleID := range targets.roles[e.ID] {
+		if roleID == u.RoleID {
+			return true
+		}
+	}
+	return false
 }
 
 func (EventService) Get(ctx context.Context, id int64) (*models.Event, error) {
@@ -459,12 +570,32 @@ func (EventService) Get(ctx context.Context, id int64) (*models.Event, error) {
 	return (EventService{}).syncEventStatus(ctx, e)
 }
 
-// GetForUser melengkapi detail event dengan status absensi dan status
-// pengajuan izin milik user yang sedang login.
-func (EventService) GetForUser(ctx context.Context, id, userID int64) (map[string]any, error) {
+// GetForUser melengkapi detail event dengan status absensi, status pengajuan
+// izin, dan cakupan (peserta + penyelenggara). Non-peserta mendapat
+// ErrForbidden supaya tidak bisa mengintip lewat URL — kecuali pembuat event,
+// anggota divisi penyelenggara, dan pemegang events.view_all.
+func (EventService) GetForUser(ctx context.Context, id int64, user *auth.User, canViewAll bool) (map[string]any, error) {
 	e, err := (EventService{}).Get(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	self, err := orm.GetByID[models.User](ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	targets, err := loadTargetSets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	isParticipant := eventIncludesUser(e, targets, self)
+	if !canViewAll && !isParticipant {
+		manageable, err := CanManageEvent(ctx, e, user)
+		if err != nil {
+			return nil, err
+		}
+		if !manageable {
+			return nil, ErrForbidden
+		}
 	}
 	raw, err := json.Marshal(e)
 	if err != nil {
@@ -474,22 +605,48 @@ func (EventService) GetForUser(ctx context.Context, id, userID int64) (map[strin
 	if err := json.Unmarshal(raw, &out); err != nil {
 		return nil, err
 	}
+	out["target_division_ids"] = targets.divisions[e.ID]
+	out["target_role_ids"] = targets.roles[e.ID]
+	out["is_participant"] = isParticipant
+	if e.DivisionID != nil {
+		if d, err := orm.GetByID[models.Division](ctx, *e.DivisionID); err == nil && d != nil {
+			out["division"] = map[string]any{"id": d.ID, "name": d.Name}
+		}
+	}
 	if att, err := orm.Objects[models.Attendance](ctx).
-		Filter("event_id", id).Filter("user_id", userID).First(); err == nil && att != nil {
+		Filter("event_id", id).Filter("user_id", user.ID).First(); err == nil && att != nil {
 		out["my_attendance_status"] = att.Status
 	}
 	if pr, err := orm.Objects[models.PermissionRequest](ctx).
-		Filter("event_id", id).Filter("user_id", userID).OrderBy("-id").First(); err == nil && pr != nil {
+		Filter("event_id", id).Filter("user_id", user.ID).OrderBy("-id").First(); err == nil && pr != nil {
 		out["my_permission_request_status"] = pr.Status
 	}
 	return out, nil
 }
 
-func (EventService) Create(ctx context.Context, e *models.Event) (*models.Event, error) {
+func (EventService) Create(ctx context.Context, e *models.Event, divisionIDs, roleIDs []int64) (*models.Event, error) {
+	if e.Audience == "" {
+		e.Audience = "custom"
+	}
+	if err := validateAudience(e.Audience, divisionIDs, roleIDs); err != nil {
+		return nil, err
+	}
+	if e.EndTime.IsZero() {
+		e.EndTime = endOfDay(e.StartTime)
+	}
 	if e.Status != "cancelled" {
 		e.Status = computeEventStatus(e.StartTime, e.EndTime, time.Now())
 	}
-	return orm.Create(ctx, e)
+	created, err := orm.Create(ctx, e)
+	if err != nil {
+		return nil, err
+	}
+	if created.Audience == "custom" {
+		if err := SetEventTargets(ctx, created.ID, divisionIDs, roleIDs); err != nil {
+			return nil, err
+		}
+	}
+	return created, nil
 }
 
 func (EventService) Update(ctx context.Context, id int64, values map[string]any) (*models.Event, error) {
@@ -509,17 +666,54 @@ func (EventService) Update(ctx context.Context, id int64, values map[string]any)
 			end = t
 		}
 	}
+	if end.IsZero() {
+		end = endOfDay(start)
+		values["end_time"] = end
+	}
 	delete(values, "status")
 	if existing.Status != "cancelled" {
 		values["status"] = computeEventStatus(start, end, time.Now())
 	}
-	return orm.UpdateByID[models.Event](ctx, id, values)
+	divisionIDs, hasDivisions := values["target_division_ids"].([]int64)
+	roleIDs, hasRoles := values["target_role_ids"].([]int64)
+	delete(values, "target_division_ids")
+	delete(values, "target_role_ids")
+
+	audienceName := existing.Audience
+	if v, ok := values["audience"].(string); ok && v != "" {
+		audienceName = v
+	}
+	if hasDivisions || hasRoles || audienceName != existing.Audience {
+		if err := validateAudience(audienceName, divisionIDs, roleIDs); err != nil {
+			return nil, err
+		}
+	}
+
+	updated, err := orm.UpdateByID[models.Event](ctx, id, values)
+	if err != nil {
+		return nil, err
+	}
+	if hasDivisions || hasRoles {
+		// Replace-all: form edit selalu mengirim daftar cakupan lengkap.
+		if err := SetEventTargets(ctx, id, divisionIDs, roleIDs); err != nil {
+			return nil, err
+		}
+	}
+	return updated, nil
 }
 
 // Delete menghapus event beserta absensi dan pengajuan izinnya dalam satu
 // transaksi — tidak bergantung pada ON DELETE CASCADE di level database.
 func (EventService) Delete(ctx context.Context, id int64) error {
 	return orm.WithTx(ctx, func(txCtx context.Context, _ *orm.Tx) error {
+		if _, err := orm.Objects[models.EventTargetDivision](txCtx).
+			Filter("event_id", id).Delete(); err != nil {
+			return err
+		}
+		if _, err := orm.Objects[models.EventTargetRole](txCtx).
+			Filter("event_id", id).Delete(); err != nil {
+			return err
+		}
 		if _, err := orm.Objects[models.Attendance](txCtx).
 			Filter("event_id", id).Delete(); err != nil {
 			return err
@@ -554,8 +748,15 @@ func (EventService) TransitionStatuses(ctx context.Context) error {
 	return nil
 }
 
+// Recap menyusun rekap dari roster peserta event, bukan dari tabel attendance.
+// Efeknya "Tidak Hadir" benar-benar terhitung — sebelumnya user yang tidak
+// absen tidak muncul di rekap sama sekali (DESIGN §6.11).
 func (EventService) Recap(ctx context.Context, eventID int64) (map[string]any, error) {
 	event, err := orm.GetByID[models.Event](ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	roster, err := (EventService{}).EventAudience(ctx, eventID)
 	if err != nil {
 		return nil, err
 	}
@@ -563,13 +764,40 @@ func (EventService) Recap(ctx context.Context, eventID int64) (map[string]any, e
 	if err != nil {
 		return nil, err
 	}
-	counts := map[string]int{"present": 0, "permitted": 0, "absent": 0, "rejected": 0}
+	byUser := map[int64]*models.Attendance{}
 	for _, a := range attendances {
-		counts[a.Status]++
+		byUser[a.UserID] = a
 	}
-	counts["total"] = len(attendances)
+
+	counts := map[string]int{"present": 0, "permitted": 0, "absent": 0, "rejected": 0}
+	rows := make([]map[string]any, 0, len(roster)+len(attendances))
+	inRoster := make(map[int64]struct{}, len(roster))
+	for _, u := range roster {
+		inRoster[u.ID] = struct{}{}
+		status := "absent"
+		if a, ok := byUser[u.ID]; ok {
+			status = a.Status
+		}
+		counts[status]++
+		rows = append(rows, map[string]any{
+			"user_id":   u.ID,
+			"status":    status,
+			"user":      map[string]any{"id": u.ID, "username": u.Username, "full_name": u.FullName, "avatar_url": u.AvatarURL},
+			"full_name": u.FullName,
+		})
+	}
+	// Sudah tercatat tapi di luar roster (mis. cakupan event diubah setelah
+	// absen) tetap ikut tampil supaya tidak ada data yang tersembunyi.
+	for _, a := range attendances {
+		if _, ok := inRoster[a.UserID]; ok {
+			continue
+		}
+		counts[a.Status]++
+		rows = append(rows, enrichAttendances(ctx, []*models.Attendance{a})[0])
+	}
+	counts["total"] = len(rows)
 	return map[string]any{
-		"event": event, "attendances": enrichAttendances(ctx, attendances), "summary": counts,
+		"event": event, "attendances": rows, "summary": counts,
 	}, nil
 }
 
@@ -632,6 +860,14 @@ func (AttendanceService) Submit(ctx context.Context, eventID, userID int64, self
 	if event.Status != "ongoing" {
 		return nil, fmt.Errorf("event is not ongoing")
 	}
+	// Cakupan: hanya peserta event yang boleh tercatat, sekalipun tahu event_id.
+	participant, err := IsEventParticipant(ctx, eventID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !participant {
+		return nil, ErrForbidden
+	}
 	existing, err := orm.Objects[models.Attendance](ctx).
 		Filter("event_id", eventID).Filter("user_id", userID).First()
 	if err == nil && existing != nil {
@@ -689,15 +925,92 @@ func decodeUpload(data string) ([]byte, string, error) {
 	return []byte(data), "application/octet-stream", nil
 }
 
+// PermissionLeadTime: pengajuan izin ditutup 3 jam sebelum event mulai.
+const PermissionLeadTime = 3 * time.Hour
+
+// PermissionDeadline: batas akhir pengajuan izin untuk sebuah event.
+func PermissionDeadline(start time.Time) time.Time {
+	return start.Add(-PermissionLeadTime)
+}
+
+// PermissionClosed: true kalau pengajuan izin sudah tidak boleh dikirim.
+// Termasuk saat event sudah berjalan (now pasti melewati start - 3 jam).
+func PermissionClosed(start, now time.Time) bool {
+	return now.After(PermissionDeadline(start))
+}
+
+type PermissionCategoryService struct{}
+
+func (PermissionCategoryService) List(ctx context.Context) ([]*models.PermissionCategory, error) {
+	return orm.Objects[models.PermissionCategory](ctx).OrderBy("name").All()
+}
+
+func (PermissionCategoryService) Create(ctx context.Context, name, description string) (*models.PermissionCategory, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("nama kategori wajib diisi")
+	}
+	return orm.Create(ctx, &models.PermissionCategory{Name: name, Description: description})
+}
+
+func (PermissionCategoryService) Update(ctx context.Context, id int64, values map[string]any) (*models.PermissionCategory, error) {
+	if raw, ok := values["name"]; ok {
+		name, _ := raw.(string)
+		name = strings.TrimSpace(name)
+		if name == "" {
+			return nil, fmt.Errorf("nama kategori wajib diisi")
+		}
+		values["name"] = name
+	}
+	return orm.UpdateByID[models.PermissionCategory](ctx, id, values)
+}
+
+// Delete menolak kategori yang masih dipakai pengajuan izin — tanpa guard ini
+// foreign key `permission_request.category_id` bocor jadi 500.
+func (PermissionCategoryService) Delete(ctx context.Context, id int64) error {
+	if _, err := orm.GetByID[models.PermissionCategory](ctx, id); err != nil {
+		return ErrNotFound
+	}
+	count, err := orm.Objects[models.PermissionRequest](ctx).Filter("category_id", id).Count()
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return fmt.Errorf("kategori masih dipakai oleh %d pengajuan izin", count)
+	}
+	_, err = orm.DeleteByID[models.PermissionCategory](ctx, id)
+	return err
+}
+
 type PermissionRequestService struct{}
 
-func (PermissionRequestService) Create(ctx context.Context, eventID, userID int64, reason, proofData string) (*models.PermissionRequest, error) {
+// Create menegakkan aturan pengajuan izin di server: event membuka izin, belum
+// lewat batas H-3 jam, pengaju peserta, kategori valid, dan bukti gambar wajib
+// (dikonversi ke WebP oleh imageutil sebelum disimpan).
+func (PermissionRequestService) Create(ctx context.Context, eventID, userID, categoryID int64, reason, proofData string) (*models.PermissionRequest, error) {
 	event, err := orm.GetByID[models.Event](ctx, eventID)
 	if err != nil {
 		return nil, err
 	}
 	if !event.AllowPermission {
-		return nil, fmt.Errorf("permission not allowed for this event")
+		return nil, fmt.Errorf("event ini tidak membuka perizinan")
+	}
+	// Izin menempel pada absensi, jadi hanya berlaku sampai event selesai.
+	if event.Status == "finished" || event.Status == "cancelled" {
+		return nil, fmt.Errorf("event sudah selesai")
+	}
+	if PermissionClosed(event.StartTime, time.Now()) {
+		return nil, fmt.Errorf("pengajuan izin ditutup %d jam sebelum event mulai", int(PermissionLeadTime.Hours()))
+	}
+	if _, err := orm.GetByID[models.PermissionCategory](ctx, categoryID); err != nil {
+		return nil, fmt.Errorf("kategori izin tidak ditemukan")
+	}
+	participant, err := IsEventParticipant(ctx, eventID, userID)
+	if err != nil {
+		return nil, err
+	}
+	if !participant {
+		return nil, ErrForbidden
 	}
 	// Sudah tercatat hadir/izin di event ini → tidak boleh mengajukan izin lagi.
 	att, err := orm.Objects[models.Attendance](ctx).
@@ -718,21 +1031,83 @@ func (PermissionRequestService) Create(ctx context.Context, eventID, userID int6
 	if prev != nil && (prev.Status == "pending" || prev.Status == "approved") {
 		return nil, fmt.Errorf("pengajuan izin anda sudah tercatat untuk event ini")
 	}
-	proofURL := ""
-	if proofData != "" {
-		data, ct, err := decodeUpload(proofData)
-		if err != nil {
-			return nil, err
-		}
-		key := storageutil.Key("permissions/proofs", fmt.Sprintf("%d-%d", eventID, userID))
-		proofURL, err = storageutil.Upload(ctx, key, data, ct)
-		if err != nil {
-			return nil, err
-		}
+	// Bukti wajib: gambar apa pun dari klien dinormalkan ke WebP lebih dulu,
+	// jadi yang tersimpan di storage selalu image/webp.
+	raw, _, err := decodeUpload(proofData)
+	if err != nil {
+		return nil, fmt.Errorf("bukti gambar wajib diunggah")
+	}
+	compressed, err := imageutil.WebP(raw)
+	if err != nil {
+		return nil, err
+	}
+	key := storageutil.Key("permissions/proofs", fmt.Sprintf("%d-%d.webp", eventID, userID))
+	proofURL, err := storageutil.Upload(ctx, key, compressed, "image/webp")
+	if err != nil {
+		return nil, err
 	}
 	return orm.Create(ctx, &models.PermissionRequest{
-		EventID: eventID, UserID: userID, Reason: reason, ProofURL: proofURL, Status: "pending",
+		EventID: eventID, UserID: userID, CategoryID: categoryID,
+		Reason: strings.TrimSpace(reason), ProofURL: proofURL, Status: "pending",
 	})
+}
+
+// manageableEventIDs: event yang boleh direview user ini — buatan sendiri atau
+// milik divisinya (divisi penyelenggara). Satu query event lalu difilter di
+// memori, mengikuti pola resolusi cakupan event yang lain.
+func manageableEventIDs(ctx context.Context, user *auth.User) (map[int64]bool, error) {
+	divisionID, err := userDivisionID(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	events, err := orm.Objects[models.Event](ctx).All()
+	if err != nil {
+		return nil, err
+	}
+	ids := make(map[int64]bool, len(events))
+	for _, e := range events {
+		if e.CreatedByID == user.ID || (e.DivisionID != nil && divisionID != 0 && *e.DivisionID == divisionID) {
+			ids[e.ID] = true
+		}
+	}
+	return ids, nil
+}
+
+// CanReview: pemegang attendance.approve (atau system admin) boleh semua event;
+// pemegang attendance.approve_own hanya event yang mereka kelola — aturan yang
+// sama dengan edit/hapus event (CanManageEvent).
+func (PermissionRequestService) CanReview(ctx context.Context, pr *models.PermissionRequest, user *auth.User, canApproveAll bool) (bool, error) {
+	if canApproveAll || user.IsSystemAdmin {
+		return true, nil
+	}
+	event, err := orm.GetByID[models.Event](ctx, pr.EventID)
+	if err != nil {
+		return false, err
+	}
+	return CanManageEvent(ctx, event, user)
+}
+
+// ListReviewable: daftar pengajuan yang boleh dilihat approver. Kadiv/Sekdiv
+// (approve_own) hanya melihat pengajuan event mereka, bukan seluruh organisasi.
+func (PermissionRequestService) ListReviewable(ctx context.Context, user *auth.User, canApproveAll bool) ([]map[string]any, error) {
+	if canApproveAll || user.IsSystemAdmin {
+		return (PermissionRequestService{}).ListAllDetailed(ctx)
+	}
+	allowed, err := manageableEventIDs(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	list, err := orm.Objects[models.PermissionRequest](ctx).OrderBy("-id").All()
+	if err != nil {
+		return nil, err
+	}
+	mine := make([]*models.PermissionRequest, 0, len(list))
+	for _, pr := range list {
+		if allowed[pr.EventID] {
+			mine = append(mine, pr)
+		}
+	}
+	return enrichPermissionRequests(ctx, mine, true)
 }
 
 func (PermissionRequestService) ListPending(ctx context.Context) ([]*models.PermissionRequest, error) {
@@ -764,6 +1139,7 @@ func (PermissionRequestService) ListMineDetailed(ctx context.Context, userID int
 func enrichPermissionRequests(ctx context.Context, list []*models.PermissionRequest, withUser bool) ([]map[string]any, error) {
 	userMap := map[int64]*models.User{}
 	eventMap := map[int64]*models.Event{}
+	categoryMap := map[int64]*models.PermissionCategory{}
 	out := make([]map[string]any, len(list))
 	for i, pr := range list {
 		raw, err := json.Marshal(pr)
@@ -801,6 +1177,14 @@ func enrichPermissionRequests(ctx context.Context, list []*models.PermissionRequ
 				"start_time": e.StartTime,
 			}
 		}
+		if _, ok := categoryMap[pr.CategoryID]; !ok {
+			if c, err := orm.GetByID[models.PermissionCategory](ctx, pr.CategoryID); err == nil {
+				categoryMap[pr.CategoryID] = c
+			}
+		}
+		if c := categoryMap[pr.CategoryID]; c != nil {
+			item["category"] = map[string]any{"id": c.ID, "name": c.Name}
+		}
 		out[i] = item
 	}
 	return out, nil
@@ -830,9 +1214,20 @@ func (PermissionRequestService) Delete(ctx context.Context, id int64) error {
 	})
 }
 
-func (PermissionRequestService) Review(ctx context.Context, id, reviewerID int64, approve bool, note string) (*models.PermissionRequest, error) {
+func (PermissionRequestService) Review(ctx context.Context, id int64, reviewer *auth.User, canApproveAll, approve bool, note string) (*models.PermissionRequest, error) {
+	existing, err := orm.GetByID[models.PermissionRequest](ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	allowed, err := (PermissionRequestService{}).CanReview(ctx, existing, reviewer, canApproveAll)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, ErrForbidden
+	}
 	var result *models.PermissionRequest
-	err := orm.WithTx(ctx, func(txCtx context.Context, _ *orm.Tx) error {
+	err = orm.WithTx(ctx, func(txCtx context.Context, _ *orm.Tx) error {
 		pr, err := orm.GetByID[models.PermissionRequest](txCtx, id)
 		if err != nil {
 			return err
@@ -848,7 +1243,7 @@ func (PermissionRequestService) Review(ctx context.Context, id, reviewerID int64
 			attStatus = "permitted"
 		}
 		result, err = orm.UpdateByID[models.PermissionRequest](txCtx, id, map[string]any{
-			"status": status, "reviewed_by_id": reviewerID, "review_note": note, "reviewed_at": now,
+			"status": status, "reviewed_by_id": reviewer.ID, "review_note": note, "reviewed_at": now,
 		})
 		if err != nil {
 			return err

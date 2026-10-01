@@ -2,6 +2,7 @@ package me
 
 import (
 	"backend/internal/auth"
+	"backend/internal/permission"
 	"backend/services"
 
 	"github.com/lrndwy/gokil/views"
@@ -17,6 +18,13 @@ func getMe(ctx *views.Context) error {
 	if err != nil {
 		return ctx.Error(404, err.Error())
 	}
+	// Permission ikut dikirim supaya AuthProvider cukup sekali request per load
+	// (sebelumnya /me + /me/permissions). /me/permissions tetap ada untuk klien lain.
+	codes, err := permission.ListCodes(ctx, user)
+	if err != nil {
+		return ctx.Error(500, err.Error())
+	}
+	data["permissions"] = codes
 	return ctx.Success(200, "profile", data)
 }
 

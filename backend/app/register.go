@@ -16,11 +16,13 @@ import (
 	app_backup "backend/app/backup"
 	app_divisions "backend/app/divisions"
 	app_divisions_id "backend/app/divisions/_id"
+	app_event_audience "backend/app/event_audience"
 	app_events "backend/app/events"
 	app_events_id "backend/app/events/_id"
 	app_events_id_attendance "backend/app/events/_id/attendance"
 	app_events_id_attendance_me "backend/app/events/_id/attendance/me"
 	app_events_id_recap "backend/app/events/_id/recap"
+	app_events_id_targets "backend/app/events/_id/targets"
 	app_finance_categories "backend/app/finance_categories"
 	app_finance_categories_id "backend/app/finance_categories/_id"
 	app_finance_transactions "backend/app/finance_transactions"
@@ -44,6 +46,8 @@ import (
 	app_me_password "backend/app/me/password"
 	app_me_permissions "backend/app/me/permissions"
 	app_members "backend/app/members"
+	app_permission_categories "backend/app/permission_categories"
+	app_permission_categories_id "backend/app/permission_categories/_id"
 	app_permission_requests "backend/app/permission_requests"
 	app_permission_requests_me "backend/app/permission_requests/me"
 	app_permissions "backend/app/permissions"
@@ -98,6 +102,7 @@ func init() {
 	framework.RegisterRoute("POST", "/divisions", app_divisions.POST)
 	framework.RegisterRoute("PUT", "/divisions/:id", app_divisions_id.PUT)
 	framework.RegisterRoute("DELETE", "/divisions/:id", app_divisions_id.DELETE)
+	framework.RegisterRoute("GET", "/event_audience", app_event_audience.GET)
 	framework.RegisterRoute("GET", "/events", app_events.GET)
 	framework.RegisterRoute("POST", "/events", app_events.POST)
 	framework.RegisterRoute("GET", "/events/:id", app_events_id.GET)
@@ -106,6 +111,7 @@ func init() {
 	framework.RegisterRoute("POST", "/events/:id/attendance", app_events_id_attendance.POST)
 	framework.RegisterRoute("GET", "/events/:id/attendance/me", app_events_id_attendance_me.GET)
 	framework.RegisterRoute("GET", "/events/:id/recap", app_events_id_recap.GET)
+	framework.RegisterRoute("GET", "/events/:id/targets", app_events_id_targets.GET)
 	framework.RegisterRoute("GET", "/finance_categories", app_finance_categories.GET)
 	framework.RegisterRoute("POST", "/finance_categories", app_finance_categories.POST)
 	framework.RegisterRoute("PUT", "/finance_categories/:id", app_finance_categories_id.PUT)
@@ -141,6 +147,10 @@ func init() {
 	framework.RegisterRoute("PUT", "/me/password", app_me_password.PUT)
 	framework.RegisterRoute("GET", "/me/permissions", app_me_permissions.GET)
 	framework.RegisterRoute("GET", "/members", app_members.GET)
+	framework.RegisterRoute("GET", "/permission_categories", app_permission_categories.GET)
+	framework.RegisterRoute("POST", "/permission_categories", app_permission_categories.POST)
+	framework.RegisterRoute("PUT", "/permission_categories/:id", app_permission_categories_id.PUT)
+	framework.RegisterRoute("DELETE", "/permission_categories/:id", app_permission_categories_id.DELETE)
 	framework.RegisterRoute("POST", "/permission_requests", app_permission_requests.POST)
 	framework.RegisterRoute("GET", "/permission_requests/me", app_permission_requests_me.GET)
 	framework.RegisterRoute("GET", "/permissions", app_permissions.GET)

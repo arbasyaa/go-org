@@ -4,14 +4,17 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"backend/internal/auth"
+	"backend/internal/idlist"
 	"backend/internal/permission"
 	"backend/internal/storageutil"
 	"backend/internal/timeutil"
 	"backend/models"
 	"backend/services"
 
+	"github.com/lrndwy/gokil/orm"
 	"github.com/lrndwy/gokil/views"
 )
 
@@ -26,12 +29,28 @@ func GET(ctx *views.Context) error {
 		if err != nil {
 			return c.Error(400, "invalid id")
 		}
-		e, err := services.EventService{}.GetForUser(c.Request.Context(), id, user.ID)
+		canViewAll, _ := permission.UserHas(c, user, "events.view_all")
+		e, err := services.EventService{}.GetForUser(c.Request.Context(), id, user, canViewAll)
+		if err == services.ErrForbidden {
+			return c.Error(403, "forbidden")
+		}
 		if err != nil {
 			return c.NotFound()
 		}
 		return c.Success(200, "event", e)
 	})(ctx)
+}
+
+// canEditEvent: event sendiri, divisi penyelenggara, atau events.view_all.
+func canEditEvent(c *views.Context, user *auth.User, eventID int64) (bool, error) {
+	e, err := orm.GetByID[models.Event](c.Request.Context(), eventID)
+	if err != nil {
+		return false, err
+	}
+	if ok, err := services.CanManageEvent(c.Request.Context(), e, user); err != nil || ok {
+		return ok, err
+	}
+	return permission.UserHas(c, user, "events.view_all")
 }
 
 func PUT(ctx *views.Context) error {
@@ -44,6 +63,13 @@ func PUT(ctx *views.Context) error {
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
 			return c.Error(400, "invalid id")
+		}
+		allowed, err := canEditEvent(c, user, id)
+		if err != nil {
+			return c.Error(404, "event not found")
+		}
+		if !allowed {
+			return c.Error(403, "forbidden")
 		}
 
 		values := map[string]any{}
@@ -68,14 +94,33 @@ func PUT(ctx *views.Context) error {
 				}
 				values["start_time"] = start
 			}
-			if v := c.Request.FormValue("end_time"); v != "" {
-				end, err := timeutil.ParseFlexible(v)
-				if err != nil {
+			if raw, ok := c.Request.Form["end_time"]; ok {
+				v := ""
+				if len(raw) > 0 {
+					v = raw[0]
+				}
+				// Kosong = batas selesai dihapus; service mengisi akhir hari mulai.
+				if strings.TrimSpace(v) == "" {
+					values["end_time"] = time.Time{}
+				} else if end, err := timeutil.ParseFlexible(v); err == nil {
+					values["end_time"] = end
+				} else {
 					return c.Error(400, "invalid end_time")
 				}
-				values["end_time"] = end
 			}
 			values["allow_permission"] = c.Request.FormValue("allow_permission") == "true"
+			if v := c.Request.FormValue("link_url"); v != "" {
+				values["link_url"] = v
+			}
+			if v := c.Request.FormValue("audience"); v != "" {
+				values["audience"] = v
+			}
+			if _, ok := c.Request.Form["target_division_ids"]; ok {
+				values["target_division_ids"] = idlist.Parse(c.Request.Form["target_division_ids"])
+			}
+			if _, ok := c.Request.Form["target_role_ids"]; ok {
+				values["target_role_ids"] = idlist.Parse(c.Request.Form["target_role_ids"])
+			}
 			if v := c.Request.FormValue("division_id"); v != "" {
 				divID, _ := strconv.ParseInt(v, 10, 64)
 				if divID > 0 {
@@ -110,19 +155,28 @@ func PUT(ctx *views.Context) error {
 				}
 				body["start_time"] = start
 			}
-			if endRaw, ok := body["end_time"].(string); ok && endRaw != "" {
-				end, err := timeutil.ParseFlexible(endRaw)
-				if err != nil {
+			if endRaw, ok := body["end_time"].(string); ok {
+				// Kosong = batas selesai dihapus; service mengisi akhir hari mulai.
+				if strings.TrimSpace(endRaw) == "" {
+					body["end_time"] = time.Time{}
+				} else if end, err := timeutil.ParseFlexible(endRaw); err == nil {
+					body["end_time"] = end
+				} else {
 					return c.Error(400, "invalid end_time")
 				}
-				body["end_time"] = end
+			}
+			// JSON mengirim array angka; map[string]any menyimpannya sebagai []any.
+			for _, key := range []string{"target_division_ids", "target_role_ids"} {
+				if raw, ok := body[key]; ok {
+					body[key] = idlist.FromAny(raw)
+				}
 			}
 			values = body
 		}
 
 		e, err := services.EventService{}.Update(c.Request.Context(), id, values)
 		if err != nil {
-			return c.Error(500, err.Error())
+			return c.Error(400, err.Error())
 		}
 		services.LogActivity(c.Request.Context(), user.ID, "update", "event", id,
 			"Memperbarui event", c.Request.RemoteAddr)
@@ -140,6 +194,13 @@ func DELETE(ctx *views.Context) error {
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
 			return c.Error(400, "invalid id")
+		}
+		allowed, err := canEditEvent(c, user, id)
+		if err != nil {
+			return c.Error(404, "event not found")
+		}
+		if !allowed {
+			return c.Error(403, "forbidden")
 		}
 		if err := (services.EventService{}).Delete(c.Request.Context(), id); err != nil {
 			return c.Error(500, err.Error())

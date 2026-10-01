@@ -33,11 +33,13 @@ var permissionDefs = []struct {
 	{"events.delete", "events", "Delete events"},
 	{"attendance.submit", "attendance", "Submit attendance"},
 	{"attendance.approve", "attendance", "Approve permission requests"},
+	{"attendance.approve_own", "attendance", "Approve permission requests for own events"},
 	{"divisions.view", "divisions", "View divisions"},
 	{"divisions.create", "divisions", "Create divisions"},
 	{"divisions.edit", "divisions", "Edit divisions"},
 	{"divisions.delete", "divisions", "Delete divisions"},
 	{"permission.submit", "permission", "Submit permission requests"},
+	{"permission.categories.manage", "permission", "Manage permission categories"},
 	{"violations.view", "violations", "View violations"},
 	{"violations.manage", "violations", "Manage violations"},
 	{"recruitment.manage", "recruitment", "Manage recruitments"},
@@ -151,7 +153,7 @@ func seedAll(ctx context.Context) error {
 	}
 
 	if _, err := orm.Create(ctx, &models.OrganizationSettings{
-		WebName:                      "MyOrg",
+		WebName:                      "Permikomnas Jateng",
 		Theme:                        "system",
 		AllowSelfRegister:            false,
 		AllowCrossDivisionEventsView: false,
@@ -216,10 +218,14 @@ func SyncMissingPermissions(ctx context.Context) error {
 		}
 	}
 
-	// Permission baru yang merupakan perluasan dari permission lama:
-	// role yang punya source otomatis mendapat target.
+	// Permission turunan: pemegang KEY otomatis diberi VALUE.
 	derived := map[string]string{
 		"finance.categories.manage": "finance.wallets.manage",
+		// Approver global boleh mengelola kategori izin.
+		"attendance.approve": "permission.categories.manage",
+		// Siapa pun yang boleh membuat event (PH/Kadiv/Sekdiv) otomatis boleh
+		// menyetujui izin untuk event yang mereka kelola sendiri.
+		"events.create": "attendance.approve_own",
 	}
 	for sourceCode, targetCode := range derived {
 		source, okS := permByCode[sourceCode]
@@ -253,9 +259,38 @@ func grantIfMissing(ctx context.Context, roleID, permissionID int64) error {
 	return err
 }
 
-
 // SyncMissingSeedData ensures default reference data exists on existing databases.
+// grantIfMissingRolePermission memberi satu permission ke role berdasarkan nama,
+// kalau role-nya ada dan belum punya. Dipakai untuk default permission operasional
+// (Kadiv/Sekdiv mengelola event divisinya) di instalasi baru — di DB yang sudah
+// jalan, role-nya dibuat manual lewat /admin/roles sehingga tidak tersentuh.
+func grantIfMissingRolePermission(ctx context.Context, roleName, code string) error {
+	role, err := orm.Objects[models.Role](ctx).Filter("name", roleName).First()
+	if err != nil || role == nil {
+		return nil
+	}
+	perm, err := orm.Objects[models.Permission](ctx).Filter("code", code).First()
+	if err != nil || perm == nil {
+		return nil
+	}
+	count, err := orm.Objects[models.RolePermission](ctx).
+		Filter("role_id", role.ID).Filter("permission_id", perm.ID).Count()
+	if err != nil || count > 0 {
+		return err
+	}
+	_, err = orm.Create(ctx, &models.RolePermission{RoleID: role.ID, PermissionID: perm.ID})
+	return err
+}
+
 func SyncMissingSeedData(ctx context.Context) error {
+	// Kadiv/Sekdiv mengelola event divisinya sendiri (DESIGN §5).
+	for _, roleName := range []string{"Kadiv", "Sekdiv"} {
+		for _, code := range []string{"events.create", "events.edit", "events.delete"} {
+			if err := grantIfMissingRolePermission(ctx, roleName, code); err != nil {
+				return err
+			}
+		}
+	}
 	count, _ := orm.Objects[models.LetterCategory](ctx).Filter("code", "SM-IN").Count()
 	if count == 0 {
 		if _, err := orm.Create(ctx, &models.LetterCategory{

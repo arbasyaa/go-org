@@ -13,11 +13,14 @@ import (
 func GET(ctx *views.Context) error {
 	return auth.RequireAuth(func(c *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
-		ok, _ := permission.UserHas(c, user, "attendance.approve")
-		if !ok {
+		canApproveAll, _ := permission.UserHas(c, user, "attendance.approve")
+		canApproveOwn, _ := permission.UserHas(c, user, "attendance.approve_own")
+		if !canApproveAll && !canApproveOwn {
 			return c.Error(403, "forbidden")
 		}
-		list, err := services.PermissionRequestService{}.ListAllDetailed(c.Request.Context())
+		// approve_own (Kadiv/Sekdiv pemilik event) hanya menerima pengajuan dari
+		// event yang mereka kelola, bukan seluruh organisasi.
+		list, err := services.PermissionRequestService{}.ListReviewable(c.Request.Context(), user, canApproveAll)
 		if err != nil {
 			return c.Error(500, err.Error())
 		}

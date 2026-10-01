@@ -12,8 +12,9 @@ import (
 func PUT(ctx *views.Context) error {
 	return auth.RequireAuth(func(c *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
-		ok, _ := permission.UserHas(c, user, "attendance.approve")
-		if !ok {
+		canApproveAll, _ := permission.UserHas(c, user, "attendance.approve")
+		canApproveOwn, _ := permission.UserHas(c, user, "attendance.approve_own")
+		if !canApproveAll && !canApproveOwn {
 			return c.Error(403, "forbidden")
 		}
 		id, err := models.ParseID(c.Param("id"))
@@ -28,7 +29,10 @@ func PUT(ctx *views.Context) error {
 			return c.Error(400, err.Error())
 		}
 		approve := body.Action == "approve"
-		pr, err := services.PermissionRequestService{}.Review(c.Request.Context(), id, user.ID, approve, body.Note)
+		pr, err := services.PermissionRequestService{}.Review(c.Request.Context(), id, user, canApproveAll, approve, body.Note)
+		if err == services.ErrForbidden {
+			return c.Error(403, "pengajuan ini bukan dari event yang Anda kelola")
+		}
 		if err != nil {
 			return c.Error(400, err.Error())
 		}

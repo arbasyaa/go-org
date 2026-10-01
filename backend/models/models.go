@@ -16,7 +16,10 @@ func init() {
 		&Division{},
 		&User{},
 		&Event{},
+		&EventTargetDivision{},
+		&EventTargetRole{},
 		&Attendance{},
+		&PermissionCategory{},
 		&PermissionRequest{},
 		&Violation{},
 		&ViolationType{},
@@ -67,76 +70,110 @@ type Permission struct {
 
 type RolePermission struct {
 	orm.BaseModel
-	Role       orm.BelongsTo[Role]       `orm:"required" json:"-"`
-	RoleID     int64                     `orm:"index" json:"role_id"`
-	Permission orm.BelongsTo[Permission] `orm:"required" json:"-"`
-	PermissionID int64                   `orm:"index" json:"permission_id"`
+	Role         orm.BelongsTo[Role]       `orm:"required" json:"-"`
+	RoleID       int64                     `orm:"index" json:"role_id"`
+	Permission   orm.BelongsTo[Permission] `orm:"required" json:"-"`
+	PermissionID int64                     `orm:"index" json:"permission_id"`
 }
 
 type Division struct {
 	orm.BaseModel
 	Name        string `orm:"required,size:100" json:"name"`
 	Description string `orm:"text" json:"description"`
+	// Color = nama token CSS (division-1..division-6); "" = otomatis.
+	Color string `orm:"size:20" json:"color"`
 }
 
 type User struct {
 	orm.BaseModel
-	Username     string            `orm:"unique,required,size:50" json:"username"`
-	Email        string            `orm:"unique,required,size:100" json:"email"`
-	PasswordHash string            `orm:"size:255" json:"-"`
-	FullName     string            `orm:"size:150" json:"full_name"`
-	BirthDate    *time.Time        `orm:"null" json:"birth_date,omitempty"`
-	Hometown     string            `orm:"size:100" json:"hometown"`
-	Phone        string            `orm:"size:20" json:"phone"`
-	AvatarURL    string            `orm:"size:255" json:"avatar_url"`
+	Username     string                  `orm:"unique,required,size:50" json:"username"`
+	Email        string                  `orm:"unique,required,size:100" json:"email"`
+	PasswordHash string                  `orm:"size:255" json:"-"`
+	FullName     string                  `orm:"size:150" json:"full_name"`
+	BirthDate    *time.Time              `orm:"null" json:"birth_date,omitempty"`
+	Hometown     string                  `orm:"size:100" json:"hometown"`
+	Phone        string                  `orm:"size:20" json:"phone"`
+	AvatarURL    string                  `orm:"size:255" json:"avatar_url"`
 	Division     orm.BelongsTo[Division] `json:"-"`
-	DivisionID   int64             `orm:"index" json:"division_id"`
+	DivisionID   int64                   `orm:"index" json:"division_id"`
 	Role         orm.BelongsTo[Role]     `json:"-"`
-	RoleID       int64             `orm:"index" json:"role_id"`
-	Status       string            `orm:"size:20;default:active" json:"status"`
+	RoleID       int64                   `orm:"index" json:"role_id"`
+	Status       string                  `orm:"size:20;default:active" json:"status"`
 }
 
 type Event struct {
 	orm.BaseModel
-	Title            string              `orm:"required,size:150" json:"title"`
-	Description      string              `orm:"text" json:"description"`
-	Division         orm.BelongsTo[Division] `json:"-"`
-	DivisionID       *int64              `orm:"null" json:"division_id"`
-	Location         string              `orm:"size:255" json:"location"`
-	BannerURL        string              `orm:"size:255" json:"banner_url"`
-	StartTime        time.Time           `json:"start_time"`
-	EndTime          time.Time           `json:"end_time"`
-	AllowPermission  bool                `orm:"default:false" json:"allow_permission"`
-	Status           string              `orm:"size:20;default:upcoming" json:"status"`
-	CreatedBy        orm.BelongsTo[User] `json:"-"`
-	CreatedByID      int64               `orm:"index" json:"created_by_id"`
+	Title           string                  `orm:"required,size:150" json:"title"`
+	Description     string                  `orm:"text" json:"description"`
+	Division        orm.BelongsTo[Division] `json:"-"`
+	DivisionID      *int64                  `orm:"null" json:"division_id"`
+	Location        string                  `orm:"size:255" json:"location"`
+	LinkURL         string                  `orm:"size:500" json:"link_url"`
+	BannerURL       string                  `orm:"size:255" json:"banner_url"`
+	StartTime       time.Time               `json:"start_time"`
+	EndTime         time.Time               `json:"end_time"`
+	AllowPermission bool                    `orm:"default:false" json:"allow_permission"`
+	// Audience: 'all' = seluruh anggota, 'custom' = pakai event_target_division/role.
+	Audience    string              `orm:"size:20;default:custom" json:"audience"`
+	Status      string              `orm:"size:20;default:upcoming" json:"status"`
+	CreatedBy   orm.BelongsTo[User] `json:"-"`
+	CreatedByID int64               `orm:"index" json:"created_by_id"`
+}
+
+// PermissionCategory: master data kategori pengajuan izin (mis. Sakit, Izin).
+// Dikelola di menu Izin → Kategori; pengajuan izin wajib menunjuk salah satunya.
+type PermissionCategory struct {
+	orm.BaseModel
+	Name        string `orm:"required,size:100" json:"name"`
+	Description string `orm:"text" json:"description"`
+}
+
+// EventTargetDivision: divisi yang jadi peserta event (audience 'custom').
+type EventTargetDivision struct {
+	orm.BaseModel
+	Event      orm.BelongsTo[Event]    `orm:"required" json:"-"`
+	EventID    int64                   `orm:"index" json:"event_id"`
+	Division   orm.BelongsTo[Division] `orm:"required" json:"-"`
+	DivisionID int64                   `orm:"index" json:"division_id"`
+}
+
+// EventTargetRole: role yang jadi peserta event (audience 'custom').
+type EventTargetRole struct {
+	orm.BaseModel
+	Event   orm.BelongsTo[Event] `orm:"required" json:"-"`
+	EventID int64                `orm:"index" json:"event_id"`
+	Role    orm.BelongsTo[Role]  `orm:"required" json:"-"`
+	RoleID  int64                `orm:"index" json:"role_id"`
 }
 
 type Attendance struct {
 	orm.BaseModel
-	Event         orm.BelongsTo[Event] `orm:"required" json:"-"`
-	EventID       int64                `orm:"index" json:"event_id"`
-	User          orm.BelongsTo[User]  `orm:"required" json:"-"`
-	UserID        int64                `orm:"index" json:"user_id"`
-	Status        string               `orm:"size:20;default:absent" json:"status"`
-	SelfieURL     string               `orm:"size:255" json:"selfie_url"`
-	SignatureURL  string               `orm:"size:255" json:"signature_url"`
-	CheckedInAt   *time.Time           `orm:"null" json:"checked_in_at,omitempty"`
+	Event        orm.BelongsTo[Event] `orm:"required" json:"-"`
+	EventID      int64                `orm:"index" json:"event_id"`
+	User         orm.BelongsTo[User]  `orm:"required" json:"-"`
+	UserID       int64                `orm:"index" json:"user_id"`
+	Status       string               `orm:"size:20;default:absent" json:"status"`
+	SelfieURL    string               `orm:"size:255" json:"selfie_url"`
+	SignatureURL string               `orm:"size:255" json:"signature_url"`
+	CheckedInAt  *time.Time           `orm:"null" json:"checked_in_at,omitempty"`
 }
 
 type PermissionRequest struct {
 	orm.BaseModel
-	Event       orm.BelongsTo[Event] `orm:"required" json:"-"`
-	EventID     int64                `orm:"index" json:"event_id"`
-	User        orm.BelongsTo[User]  `orm:"required" json:"-"`
-	UserID      int64                `orm:"index" json:"user_id"`
-	Reason      string               `orm:"text" json:"reason"`
-	ProofURL    string               `orm:"size:255" json:"proof_url"`
-	Status      string               `orm:"size:20;default:pending" json:"status"`
-	ReviewedBy  orm.BelongsTo[User]  `json:"-"`
-	ReviewedByID *int64              `orm:"null" json:"reviewed_by_id,omitempty"`
-	ReviewNote  string               `orm:"text" json:"review_note"`
-	ReviewedAt  *time.Time           `orm:"null" json:"reviewed_at,omitempty"`
+	Event        orm.BelongsTo[Event] `orm:"required" json:"-"`
+	EventID      int64                `orm:"index" json:"event_id"`
+	User         orm.BelongsTo[User]  `orm:"required" json:"-"`
+	UserID       int64                `orm:"index" json:"user_id"`
+	// Category = master data kategori izin (mis. Sakit, Izin).
+	Category     orm.BelongsTo[PermissionCategory] `json:"-"`
+	CategoryID   int64                              `orm:"index" json:"category_id"`
+	Reason       string               `orm:"text" json:"reason"`
+	ProofURL     string               `orm:"size:255" json:"proof_url"`
+	Status       string               `orm:"size:20;default:pending" json:"status"`
+	ReviewedBy   orm.BelongsTo[User]  `json:"-"`
+	ReviewedByID *int64               `orm:"null" json:"reviewed_by_id,omitempty"`
+	ReviewNote   string               `orm:"text" json:"review_note"`
+	ReviewedAt   *time.Time           `orm:"null" json:"reviewed_at,omitempty"`
 }
 
 type ViolationType struct {
@@ -192,16 +229,16 @@ type RecruitmentCustomField struct {
 
 type RecruitmentSubmission struct {
 	orm.BaseModel
-	Recruitment      orm.BelongsTo[Recruitment] `orm:"required" json:"-"`
-	RecruitmentID    int64                      `orm:"index" json:"recruitment_id"`
-	Name             string                     `orm:"size:150" json:"name"`
-	NIM              string                     `orm:"size:50" json:"nim"`
-	DivisionInterest orm.BelongsTo[Division]    `json:"-"`
-	DivisionInterestID int64                    `orm:"index" json:"division_interest_id"`
-	Contact          string                     `orm:"size:100" json:"contact"`
-	CustomAnswers    json.RawMessage            `orm:"type:json" json:"custom_answers,omitempty"`
-	Status           string                     `orm:"size:20;default:submitted" json:"status"`
-	SubmittedAt      time.Time                  `json:"submitted_at"`
+	Recruitment        orm.BelongsTo[Recruitment] `orm:"required" json:"-"`
+	RecruitmentID      int64                      `orm:"index" json:"recruitment_id"`
+	Name               string                     `orm:"size:150" json:"name"`
+	NIM                string                     `orm:"size:50" json:"nim"`
+	DivisionInterest   orm.BelongsTo[Division]    `json:"-"`
+	DivisionInterestID int64                      `orm:"index" json:"division_interest_id"`
+	Contact            string                     `orm:"size:100" json:"contact"`
+	CustomAnswers      json.RawMessage            `orm:"type:json" json:"custom_answers,omitempty"`
+	Status             string                     `orm:"size:20;default:submitted" json:"status"`
+	SubmittedAt        time.Time                  `json:"submitted_at"`
 }
 
 type LetterCategory struct {
@@ -215,41 +252,41 @@ type LetterCategory struct {
 
 type LetterTemplate struct {
 	orm.BaseModel
-	Category     orm.BelongsTo[LetterCategory] `json:"-"`
-	CategoryID   *int64                        `orm:"null;index" json:"category_id,omitempty"`
-	Name         string                        `orm:"size:100" json:"name"`
-	TemplateURL  string                        `orm:"size:255" json:"template_url"`
+	Category    orm.BelongsTo[LetterCategory] `json:"-"`
+	CategoryID  *int64                        `orm:"null;index" json:"category_id,omitempty"`
+	Name        string                        `orm:"size:100" json:"name"`
+	TemplateURL string                        `orm:"size:255" json:"template_url"`
 }
 
 type Letter struct {
 	orm.BaseModel
-	Type           string                      `orm:"size:20" json:"type"`
+	Type           string                        `orm:"size:20" json:"type"`
 	Category       orm.BelongsTo[LetterCategory] `orm:"required" json:"-"`
-	CategoryID     int64                       `orm:"index" json:"category_id"`
-	LetterCode     string                      `orm:"size:100" json:"letter_code"`
-	Subject        string                      `orm:"size:255" json:"subject"`
-	LetterDate     time.Time                   `json:"letter_date"`
-	Sender         string                      `orm:"size:150" json:"sender"`
-	Recipient      string                      `orm:"size:150" json:"recipient"`
-	Description    string                      `orm:"text" json:"description"`
-	AttachmentURL  string                      `orm:"size:255" json:"attachment_url"`
-	DocumentURL    string                      `orm:"size:255" json:"document_url"`
-	VariableValues JSONField                   `orm:"type:json;null" json:"variable_values,omitempty"`
-	CreatedBy      orm.BelongsTo[User]         `json:"-"`
-	CreatedByID    int64                       `orm:"index" json:"created_by_id"`
+	CategoryID     int64                         `orm:"index" json:"category_id"`
+	LetterCode     string                        `orm:"size:100" json:"letter_code"`
+	Subject        string                        `orm:"size:255" json:"subject"`
+	LetterDate     time.Time                     `json:"letter_date"`
+	Sender         string                        `orm:"size:150" json:"sender"`
+	Recipient      string                        `orm:"size:150" json:"recipient"`
+	Description    string                        `orm:"text" json:"description"`
+	AttachmentURL  string                        `orm:"size:255" json:"attachment_url"`
+	DocumentURL    string                        `orm:"size:255" json:"document_url"`
+	VariableValues JSONField                     `orm:"type:json;null" json:"variable_values,omitempty"`
+	CreatedBy      orm.BelongsTo[User]           `json:"-"`
+	CreatedByID    int64                         `orm:"index" json:"created_by_id"`
 }
 
 type Announcement struct {
 	orm.BaseModel
-	Title              string              `orm:"size:200" json:"title"`
-	Content            string              `orm:"text" json:"content"`
-	BannerURL          string              `orm:"size:255" json:"banner_url"`
-	TargetType         string              `orm:"size:20" json:"target_type"`
-	TargetDivision     orm.BelongsTo[Division] `json:"-"`
-	TargetDivisionID   *int64              `orm:"null" json:"target_division_id"`
-	PublishDate        time.Time           `json:"publish_date"`
-	CreatedBy          orm.BelongsTo[User] `json:"-"`
-	CreatedByID        int64               `orm:"index" json:"created_by_id"`
+	Title            string                  `orm:"size:200" json:"title"`
+	Content          string                  `orm:"text" json:"content"`
+	BannerURL        string                  `orm:"size:255" json:"banner_url"`
+	TargetType       string                  `orm:"size:20" json:"target_type"`
+	TargetDivision   orm.BelongsTo[Division] `json:"-"`
+	TargetDivisionID *int64                  `orm:"null" json:"target_division_id"`
+	PublishDate      time.Time               `json:"publish_date"`
+	CreatedBy        orm.BelongsTo[User]     `json:"-"`
+	CreatedByID      int64                   `orm:"index" json:"created_by_id"`
 }
 
 type AnnouncementAttachment struct {
@@ -292,11 +329,11 @@ type FinanceTransaction struct {
 
 type PushSubscription struct {
 	orm.BaseModel
-	User      orm.BelongsTo[User] `orm:"required" json:"-"`
-	UserID    int64               `orm:"index" json:"user_id"`
-	Endpoint  string              `orm:"unique,required,size:512" json:"endpoint"`
-	P256dh    string              `orm:"size:255" json:"p256dh"`
-	Auth      string              `orm:"size:255" json:"auth"`
+	User     orm.BelongsTo[User] `orm:"required" json:"-"`
+	UserID   int64               `orm:"index" json:"user_id"`
+	Endpoint string              `orm:"unique,required,size:512" json:"endpoint"`
+	P256dh   string              `orm:"size:255" json:"p256dh"`
+	Auth     string              `orm:"size:255" json:"auth"`
 }
 
 type StorageFolder struct {

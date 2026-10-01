@@ -16,14 +16,18 @@ func POST(ctx *views.Context) error {
 			return c.Error(403, "forbidden")
 		}
 		var body struct {
-			EventID int64  `json:"event_id"`
-			Reason  string `json:"reason"`
-			Proof   string `json:"proof"`
+			EventID    int64  `json:"event_id"`
+			CategoryID int64  `json:"category_id"`
+			Reason     string `json:"reason"`
+			Proof      string `json:"proof"`
 		}
 		if err := c.Bind(&body); err != nil {
 			return c.Error(400, err.Error())
 		}
-		pr, err := services.PermissionRequestService{}.Create(c.Request.Context(), body.EventID, user.ID, body.Reason, body.Proof)
+		pr, err := services.PermissionRequestService{}.Create(c.Request.Context(), body.EventID, user.ID, body.CategoryID, body.Reason, body.Proof)
+		if err == services.ErrForbidden {
+			return c.Error(403, "anda bukan peserta event ini")
+		}
 		if err != nil {
 			return c.Error(400, err.Error())
 		}

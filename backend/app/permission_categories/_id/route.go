@@ -9,7 +9,9 @@ import (
 	"github.com/lrndwy/gokil/views"
 )
 
-func deleteError(c *views.Context, err error, label string) error {
+// writeError: 404 kalau barisnya tidak ada, 400 tanpa pesan SQL mentah kalau
+// ditolak aturan (nama kosong / kategori masih dipakai).
+func writeError(c *views.Context, err error, label string) error {
 	if err == services.ErrNotFound {
 		return c.Error(404, label+" tidak ditemukan")
 	}
@@ -19,7 +21,7 @@ func deleteError(c *views.Context, err error, label string) error {
 func PUT(ctx *views.Context) error {
 	return auth.RequireAuth(func(c *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
-		ok, _ := permission.UserHas(c, user, "roles.edit")
+		ok, _ := permission.UserHas(c, user, "permission.categories.manage")
 		if !ok {
 			return c.Error(403, "forbidden")
 		}
@@ -31,20 +33,20 @@ func PUT(ctx *views.Context) error {
 		if err := c.Bind(&body); err != nil {
 			return c.Error(400, err.Error())
 		}
-		r, err := services.RoleService{}.Update(c.Request.Context(), id, body)
+		category, err := services.PermissionCategoryService{}.Update(c.Request.Context(), id, body)
 		if err != nil {
-			return c.Error(500, err.Error())
+			return writeError(c, err, "kategori")
 		}
-		services.LogActivity(c.Request.Context(), user.ID, "update", "role", id,
-			"Memperbarui role", c.Request.RemoteAddr)
-		return c.Success(200, "role updated", r)
+		services.LogActivity(c.Request.Context(), user.ID, "update", "permission_category", id,
+			"Memperbarui kategori izin", c.Request.RemoteAddr)
+		return c.Success(200, "category updated", category)
 	})(ctx)
 }
 
 func DELETE(ctx *views.Context) error {
 	return auth.RequireAuth(func(c *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
-		ok, _ := permission.UserHas(c, user, "roles.delete")
+		ok, _ := permission.UserHas(c, user, "permission.categories.manage")
 		if !ok {
 			return c.Error(403, "forbidden")
 		}
@@ -52,11 +54,11 @@ func DELETE(ctx *views.Context) error {
 		if err != nil {
 			return c.Error(400, "invalid id")
 		}
-		if err := (services.RoleService{}).Delete(c.Request.Context(), id); err != nil {
-			return deleteError(c, err, "role")
+		if err := (services.PermissionCategoryService{}).Delete(c.Request.Context(), id); err != nil {
+			return writeError(c, err, "kategori")
 		}
-		services.LogActivity(c.Request.Context(), user.ID, "delete", "role", id,
-			"Menghapus role", c.Request.RemoteAddr)
-		return c.Success(200, "role deleted", nil)
+		services.LogActivity(c.Request.Context(), user.ID, "delete", "permission_category", id,
+			"Menghapus kategori izin", c.Request.RemoteAddr)
+		return c.Success(200, "category deleted", nil)
 	})(ctx)
 }

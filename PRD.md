@@ -186,7 +186,7 @@ Setiap fitur memiliki sekumpulan **permission code** yang dapat di-assign ke Rol
 **Alur — Perizinan Terkait Absensi:** (lihat detail di 3.3 Perizinan, terhubung ke event yang `allow_permission = true`)
 
 **Alur — Approval Perizinan:**
-1. Role berizin (`attendance.approve`) buka list pengajuan izin pending.
+1. Role berizin (`attendance.approve`) buka list pengajuan izin pending — atau, untuk pengurus divisi (`attendance.approve_own`: PH/Kadiv/Sekdiv), hanya pengajuan dari event yang mereka buat/kelola. Daftar dan tombol Setujui/Tolak memakai aturan cakupan yang sama, ditegakkan di server.
 2. Melihat detail: nama user, event, alasan, foto bukti.
 3. Klik Approve/Reject (+ catatan opsional).
 4. Status absensi user berubah jadi `permitted` (jika approve) atau tetap `absent`/`rejected` (jika reject).
@@ -230,12 +230,16 @@ Setiap fitur memiliki sekumpulan **permission code** yang dapat di-assign ke Rol
 
 **Alur:**
 1. User membuka event yang `allow_permission = true` dan belum absen.
-2. Klik "Ajukan Izin" → isi alasan + upload foto/bukti pendukung.
+2. Klik "Ajukan Izin" → pilih **kategori** (master data: Sakit, Izin, dst.), isi keterangan (opsional), dan unggah **bukti gambar (wajib)**.
 3. Submit → status `pending`, masuk ke antrian approval role berwenang (lihat 3.2 Absensi - Approval Perizinan).
 4. User bisa memantau status pengajuannya di `/my-permissions`.
 
+**Aturan waktu:** pengajuan ditutup **3 jam sebelum waktu mulai event** (mis. event 19:00 → batas 16:00), termasuk saat event sedang berjalan. Tombol pengajuan nonaktif dengan penjelasan batasnya; backend menolak dengan pesan yang sama.
+
+**Bukti:** hanya gambar (JPG/PNG/WebP), maks. 8 MB. Server mengubahnya ke **WebP** (kualitas 75, sisi terpanjang dipotong ke 1600 px) sebelum disimpan, jadi storage hemat. Foto HEIC/PDF ditolak dengan arahan ubah ke JPG.
+
 **Input:**
-- `event_id, user_id, reason (text), proof_file (image/pdf)`
+- `event_id, user_id, category_id (FK permission_categories), reason (text, opsional), proof (data URL gambar, wajib)`
 
 **Output:**
 - Status pengajuan (`pending/approved/rejected`)
@@ -433,7 +437,8 @@ UNIQUE(event_id, user_id)
 id            bigint PK (identity)
 event_id      bigint FK -> events.id
 user_id       bigint FK -> users.id
-reason        text
+category_id   bigint FK -> permission_categories.id   # master data kategori izin
+reason        text                                    # opsional (boleh kosong)
 proof_url     varchar(255)
 status        enum('pending','approved','rejected') default 'pending'
 reviewed_by    bigint FK -> users.id NULLABLE
@@ -545,7 +550,17 @@ file_url         varchar(255)
 file_type        enum('image','document')
 ```
 
-### 4.19 Relasi Ringkas (ERD narasi)
+### 4.19 permission_categories  (Master Data Kategori Izin)
+```
+id            bigint PK (identity)
+name          varchar(100)      # mis. "Sakit", "Izin"
+description   text
+created_at    timestamp
+updated_at    timestamp
+```
+Dikelola di `/admin/permissions/categories` (`permission.categories.manage`). Kategori yang masih dipakai pengajuan izin tidak bisa dihapus.
+
+### 4.20 Relasi Ringkas (ERD narasi)
 - `users` → banyak ke `divisions` (many-to-one) dan `roles` (many-to-one)
 - `roles` ↔ `permissions` melalui `role_permissions` (many-to-many)
 - `events` → punya banyak `attendances` dan `permission_requests` (one-to-many)
@@ -669,8 +684,8 @@ Frontend Next.js (Server Components) membaca cookie untuk request ke API. Client
 |---|---|---|
 | POST | `/events/:id/attendance` | `attendance.submit` |
 | GET | `/events/:id/attendance/me` | `attendance.submit` |
-| GET | `/attendance/permission-requests` | `attendance.approve` |
-| PUT | `/attendance/permission-requests/:id` | `attendance.approve` |
+| GET | `/attendance/permission-requests` | `attendance.approve` (semua) \| `attendance.approve_own` (hanya event yang dikelola) |
+| PUT | `/attendance/permission-requests/:id` | `attendance.approve` \| `attendance.approve_own` |
 
 ---
 
@@ -689,6 +704,10 @@ Frontend Next.js (Server Components) membaca cookie untuk request ke API. Client
 |---|---|---|
 | POST | `/permission-requests` | `permission.submit` |
 | GET | `/permission-requests/me` | `permission.submit` |
+| GET | `/permission_categories` | auth (dipakai form anggota) |
+| POST | `/permission_categories` | `permission.categories.manage` |
+| PUT | `/permission_categories/:id` | `permission.categories.manage` |
+| DELETE | `/permission_categories/:id` | `permission.categories.manage` |
 
 ---
 
@@ -741,7 +760,7 @@ Satu aplikasi Next.js di `frontend/` memakai **route groups**:
 |---|---|---|
 | Auth / Publik | `app/(auth)/` | `/login`, `/register` (jika diaktifkan), `/recruitment/:slug` |
 | Anggota | `app/(member)/` | `/dashboard`, `/profile`, `/events`, `/events/:id`, `/events/:id/attendance`, `/my-permissions`, `/announcements`, `/divisions/:id` |
-| Admin / Role berizin | `app/(admin)/admin/` | `/admin/settings`, `/admin/users`, `/admin/users/import`, `/admin/roles`, `/admin/events`, `/admin/events/:id/recap`, `/admin/divisions`, `/admin/permissions`, `/admin/violations`, `/admin/recruitments`, `/admin/recruitments/:id/submissions`, `/admin/letters/incoming`, `/admin/letters/outgoing`, `/admin/letters/categories`, `/admin/announcements/create` |
+| Admin / Role berizin | `app/(admin)/admin/` | `/admin/settings`, `/admin/users`, `/admin/users/import`, `/admin/roles`, `/admin/events`, `/admin/events/:id/recap`, `/admin/divisions`, `/admin/permissions`, `/admin/permissions/categories`, `/admin/violations`, `/admin/recruitments`, `/admin/recruitments/:id/submissions`, `/admin/letters/incoming`, `/admin/letters/outgoing`, `/admin/letters/categories`, `/admin/announcements/create` |
 
 **UI:** seluruh tampilan memakai komponen shadcn/ui (preset `base-mira`). Blok yang sudah terpasang: `login-02`, `signup-02`, `sidebar-08` — dijadikan fondasi auth & shell dashboard/admin.
 

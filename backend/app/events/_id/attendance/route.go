@@ -28,6 +28,9 @@ func POST(ctx *views.Context) error {
 			return c.Error(400, err.Error())
 		}
 		a, err := services.AttendanceService{}.Submit(c.Request.Context(), eventID, user.ID, body.Selfie, body.Signature)
+		if err == services.ErrForbidden {
+			return c.Error(403, "anda bukan peserta event ini")
+		}
 		if err != nil {
 			return c.Error(400, err.Error())
 		}

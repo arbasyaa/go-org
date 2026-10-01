@@ -31,13 +31,14 @@ func POST(ctx *views.Context) error {
 		var body struct {
 			Name        string `json:"name"`
 			Description string `json:"description"`
+			Color       string `json:"color"`
 		}
 		if err := c.Bind(&body); err != nil {
 			return c.Error(400, err.Error())
 		}
-		d, err := services.DivisionService{}.Create(c.Request.Context(), body.Name, body.Description)
+		d, err := services.DivisionService{}.Create(c.Request.Context(), body.Name, body.Description, body.Color)
 		if err != nil {
-			return c.Error(500, err.Error())
+			return c.Error(400, err.Error())
 		}
 		services.LogActivity(c.Request.Context(), user.ID, "create", "division", d.ID,
 			"Membuat divisi "+body.Name, c.Request.RemoteAddr)

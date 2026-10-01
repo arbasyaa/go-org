@@ -9,6 +9,16 @@ import (
 	"github.com/lrndwy/gokil/views"
 )
 
+// writeError menerjemahkan hasil service (delete/update) ke status yang tepat:
+// 404 kalau barisnya tidak ada, 400 tanpa pesan SQL mentah kalau ditolak aturan
+// (mis. masih dipakai anggota atau warna tidak dikenal).
+func writeError(c *views.Context, err error, label string) error {
+	if err == services.ErrNotFound {
+		return c.Error(404, label+" tidak ditemukan")
+	}
+	return c.Error(400, err.Error())
+}
+
 func PUT(ctx *views.Context) error {
 	return auth.RequireAuth(func(c *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
@@ -26,7 +36,7 @@ func PUT(ctx *views.Context) error {
 		}
 		d, err := services.DivisionService{}.Update(c.Request.Context(), id, body)
 		if err != nil {
-			return c.Error(500, err.Error())
+			return writeError(c, err, "divisi")
 		}
 		services.LogActivity(c.Request.Context(), user.ID, "update", "division", id,
 			"Memperbarui divisi", c.Request.RemoteAddr)
@@ -46,7 +56,7 @@ func DELETE(ctx *views.Context) error {
 			return c.Error(400, "invalid id")
 		}
 		if err := (services.DivisionService{}).Delete(c.Request.Context(), id); err != nil {
-			return c.Error(500, err.Error())
+			return writeError(c, err, "divisi")
 		}
 		services.LogActivity(c.Request.Context(), user.ID, "delete", "division", id,
 			"Menghapus divisi", c.Request.RemoteAddr)

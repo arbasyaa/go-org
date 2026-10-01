@@ -16,12 +16,14 @@ Panduan kerja AI agent: [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md).
 
 **Framework backend:** gokil adalah framework buatan sendiri (file-based routing ala Next.js + pola Django-like: settings, models, migrations, cron). Repo: <https://github.com/lrndwy/gokil.git>. Versi awal proyek: `v0.8.1`; setelah patch Fase 0 → bump ke `v0.9.0+` (lihat §0.1 dan §13).
 
-**Desain UI:** seluruh tampilan memakai komponen shadcn yang sudah terpasang / ditambahkan lewat CLI. Preset `base-mira` + token CSS di [`frontend/app/globals.css`](frontend/app/globals.css) adalah **satu-satunya** sumber warna/radius. Tidak menambah palette custom di luar token tersebut. Field `theme` di settings = appearance mode (`light` / `dark` / `system`).
+**Desain UI:** seluruh tampilan memakai komponen shadcn yang sudah terpasang / ditambahkan lewat CLI. Preset `base-mira` + token CSS di [`frontend/app/globals.css`](frontend/app/globals.css) adalah **satu-satunya** sumber warna/radius (putih + aksen indigo; palet divisi `--division-1..6`). Tidak menambah palette custom di luar token tersebut. **Tampilan selalu terang** — dark mode dihapus, field `theme` di settings tidak lagi dipakai UI.
 
 Blok shadcn yang sudah di-install:
 - `npx shadcn@latest add login-02` → `components/login-form.tsx`, `app/login`
 - `npx shadcn@latest add signup-02` → `components/signup-form.tsx`, `app/signup`
 - `npx shadcn@latest add sidebar-08` → `components/app-sidebar.tsx`, `nav-*`, `app/dashboard`
+
+**Redis:** sudah tersedia di `docker-compose` dan `GOKIL_REDIS_*` di config, tapi **belum dipakai kode aplikasi** (tidak ada cache yang membaca/menulisnya). Untuk beban saat ini (data referensi ~2 ms, `/events` ~2 ms setelah perbaikan write-on-read) cache belum dibutuhkan; Redis baru masuk saat backend berjalan **lebih dari satu instance** (cache in-process jadi tidak konsisten) atau saat agregat berat mulai dipanggil sering. `GET /me` sudah menyertakan `permissions` supaya tidak ada request tambahan per load.
 
 ### 0.1 Batasan gokil v0.8.1 & Patch yang Diperlukan
 
@@ -115,6 +117,22 @@ MyOrg-v2/
 
 **Layer backend:** `route.go` (bind/response + panggil service) → `services/` (logic) → `models/` + `orm` / raw SQL. Jangan taruh approval, counter surat, atau cron logic di handler.
 
+### 1.2 Anggaran Performa & Animasi (frontend)
+
+Aturan yang dijaga supaya aplikasi tetap ringan (diukur di build produksi, cold load):
+
+| Aturan | Alasan / angka |
+|---|---|
+| Hanya font default (Inter) yang `preload`; 5 font pilihan tampilan memakai `preload: false` | Sebelumnya 6 font ikut di-preload = **192 KB** di critical path; sekarang 1 file (48 KB) dan font lain diambil saat benar-benar dipakai |
+| Library berat **wajib** dynamic import: `jspdf`/`jspdf-autotable` (export PDF), `recharts` (grafik), `xlsx`, `docx-preview` | jspdf 131 KB hanya diambil saat klik Export; recharts menyusul setelah first paint (58 KB JS sebelum paint di dashboard admin) |
+| Gambar di daftar/kartu pakai `loading="lazy"` + `decoding="async"` (hero tetap eager) | 13 lokasi; banner bawah fold tidak ikut di load awal |
+| `GET /me` menyertakan `permissions` | Sidebar/AuthProvider cukup 1 request per load (dulu `/me` + `/me/permissions`) |
+| Data awal dashboard (`/dashboard`) & daftar event (`/events`) diambil di **Server Component** (`lib/server-api.ts`, cookie user) lalu diteruskan ke komponen client | Kalender + kartu sudah ada di HTML pertama (35 sel hari terverifikasi di HTML), skeleton hilang di hard refresh: prod ~58 ms, dev ~128 ms sampai kalender terlihat |
+| `GET /events` tidak lagi memindahkan status event (write di jalur baca dihapus; cron 1 menit yang menangani) | `/events` 60 ms → **~2 ms**; tidak ada lagi UPDATE saat ada yang membuka daftar event |
+| Animasi masuk memakai CSS (`@keyframes fade-in-up` + `@utility animate-fade-in-up` di `globals.css`, helper `lib/motion.ts`) — **bukan** library animasi | Nol byte JS tambahan, hanya transform+opacity (GPU, tanpa layout shift), aman untuk LCP |
+| Satu gerakan orkestrasi per halaman: daftar kartu `fadeInDelay(index)` (maks 8 langkah, 45 ms), konten halaman admin fade sekali | Menghindari efek tersebar (ciri slop) sekaligus tidak menunda konten terbaca |
+| `prefers-reduced-motion` memaksa `animation-duration: 0.01ms` **dan** `animation-delay: 0ms` | Tidak ada jeda kosong/elemen transparan bagi pengguna yang mematikan animasi |
+
 ## 2. Domain Model → Entity Mapping
 
 Setiap tabel di PRD §4 dipetakan ke model Go yang embed `orm.BaseModel` (`ID int64`, `CreatedAt`, `UpdatedAt`). Urutan implementasi mengikuti dependency.
@@ -124,6 +142,7 @@ Setiap tabel di PRD §4 dipetakan ke model Go yang embed `orm.BaseModel` (`ID in
 |---|---|---|
 | `name` | string | |
 | `description` | text | tugas pokok & fungsi |
+| `color` | varchar(20) | nama token warna chip kalender (`division-1`..`division-8`); `""` = otomatis. Diatur di menu **Divisi** (`PUT /divisions/:id`), divalidasi allowlist di service supaya nilai DB tidak bisa menyuntik warna sembarang ke style |
 
 ### 2.2 Role & Permission (custom RBAC, lihat §5)
 **Role:** `name` unique, `description` optional, `is_system` boolean (true untuk Admin bawaan).
@@ -155,20 +174,55 @@ Singleton (max 1 row). Service menolak create kedua (409); delete dinonaktifkan.
 | Field | Tipe |
 |---|---|
 | `web_name`, `logo_url`, `icon_url` | string |
-| `theme` | `light` \| `dark` \| `system` |
+| `theme` | `light` (kolom warisan; UI tidak lagi mengubahnya) |
 | `allow_self_register`, `allow_cross_division_events_view` | boolean |
 
 Admin UI: `/admin/settings` (form singleton), bukan CRUD list.
 
 ### 2.5 Event
-`title`, `location`, `description`, `division_id` nullable (null = General), `banner_url`, `start_time`, `end_time`, `allow_permission`, `status` (`upcoming` \| `ongoing` \| `finished` \| `cancelled`), `created_by`.
+`title`, `location`, `description`, `link_url` (link eksternal meeting/streaming), `division_id` nullable (**divisi penyelenggara**, null = tidak ditentukan), `banner_url`, `start_time`, `end_time`, `allow_permission`, `audience` (`all` \| `custom`), `status` (`upcoming` \| `ongoing` \| `finished` \| `cancelled`), `created_by`.
+
+**`end_time` opsional.** Form tidak mewajibkannya; dikosongkan berarti event berakhir di penghujung hari `start_time` (`endOfDay`, 23:59:59 di zona waktu `start_time`). Kolom tetap `NOT NULL` — tidak ada migration.
+
+- UI yang mengisi default itu di **zona browser** (`lib/datetime.ts` → `endOfDayInput`), karena hanya browser yang tahu tz user; backend tidak menebak.
+- Backend tetap punya fallback yang sama untuk klien non-browser: `end_time` kosong ⇒ `endOfDay(start_time)` di zona `start_time`. Jadi kirim `start_time` ber-zona (`+07:00`) kalau memakai API langsung.
+
+**Cakupan event** — siapa saja yang jadi peserta. Dua tabel target (pola `RecruitmentTargetDivision`):
+
+| Tabel | Isi |
+|---|---|
+| `event_target_division` | divisi peserta, `UNIQUE(event_id, division_id)` |
+| `event_target_role` | role peserta, `UNIQUE(event_id, role_id)` |
+
+Dua sumbu terpisah yang **saling menambah (OR)**, bukan memfilter: peserta = anggota divisi target ∪ pemegang role target. Contoh: PH membuat "Rapat Koor" untuk divisi PH + PSDM **dan** role PH → seluruh anggota PH, seluruh anggota PSDM, plus semua pemegang role PH lintas divisi.
+
+- `audience = 'all'` → seluruh anggota aktif, baris target diabaikan (tombol "Semua Divisi" di form).
+- `audience = 'custom'` → **wajib** minimal satu divisi atau role (`validateAudience`). Event tanpa peserta ditolak.
+- `division_id` **bukan** cakupan — itu penyelenggara, dan tidak berarti anggota divisi itu ikut hadir.
+
+`services/event_audience.go` adalah satu-satunya penentu peserta (`EventAudience`, `eventIncludesUser`, `IsEventParticipant`), dipakai bersama oleh filter daftar, guard absen, guard izin, dan rekap — supaya keempatnya tidak pernah berbeda pendapat. Resolusi bekerja di memori dari satu query user (`activeUsers`) karena gokil salah menomori placeholder saat `Filter("__in")` digabung filter lain.
+
+`GET /events/:id/targets` mengembalikan roster + jumlahnya; `GET /event_audience` mengembalikan divisi/role beserta jumlah anggota untuk form (path tanpa `:id` karena router gokil linear — `/events/cakupan` akan tertangkap `/events/:id`).
+
+**Batas edit/hapus** (`CanManageEvent`): event sendiri, anggota divisi penyelenggara, atau `events.view_all`. **Recap** disusun dari roster, bukan tabel `attendances` — sehingga "Tidak Hadir" benar-benar terhitung; absensi di luar roster tetap ikut tampil agar tidak ada data tersembunyi.
 
 ### 2.6 Attendance
 `event_id`, `user_id`, `status` (`present` \| `permitted` \| `absent` \| `rejected`), `selfie_url`, `signature_url`, `checked_in_at`.  
 **UNIQUE `(event_id, user_id)`** — migration SQL manual (ORM tidak generate composite unique).
 
 ### 2.7 PermissionRequest (Perizinan)
-`event_id`, `user_id`, `reason`, `proof_url`, `status`, `reviewed_by`, `review_note`, `reviewed_at`.
+`event_id`, `user_id`, `category_id` (FK `permission_category`), `reason` (opsional), `proof_url`, `status`, `reviewed_by`, `review_note`, `reviewed_at`.
+
+**PermissionCategory** (master data): `name`, `description` — dikelola di `/admin/permissions/categories` (`permission.categories.manage`). Kategori yang masih dipakai tidak bisa dihapus (`PermissionCategoryService.Delete`).
+
+**Aturan pengajuan** (`PermissionRequestService.Create`, semua ditegakkan di server):
+- Event harus `allow_permission`, belum `finished`/`cancelled`, dan pengaju peserta event.
+- **Batas waktu `PermissionLeadTime` = 3 jam sebelum `start_time`** (`PermissionClosed`) — setelah itu (termasuk saat event berjalan) ditolak.
+- Kategori harus ada; keterangan opsional; **bukti gambar wajib**.
+- Bukti dinormalkan `internal/imageutil`: sniff MIME (JPG/PNG/WebP/GIF saja, HEIC/PDF ditolak), batas 8 MB & 40 MP, sisi terpanjang dipotong ke 1600 px, lalu di-encode **WebP lossy** (library `gen2brain/webp`, libwebp via WASM — tanpa cgo) → yang tersimpan di storage selalu `image/webp`.
+
+### 2.7.1 PermissionCategory (Master Data Kategori Izin)
+`name` (wajib), `description`. Seed awal: **Sakit** dan **Izin**.
 
 ### 2.8 Violation
 `user_id`, `issued_by`, `violation_type`, `sp_level`, `description`, `document_url`, `issued_date`.
@@ -240,7 +294,8 @@ Frontend harus memanggil path underscore.
 | `GET /me/permissions` | Auth | Daftar permission code untuk gating sidebar |
 | `GET /events/:id/recap` | `events.view` | Aggregasi + export |
 | `POST /events/:id/attendance` | `attendance.submit` | Selfie + signature |
-| `GET/PUT /attendance/permission-requests/*` | `attendance.approve` | Approval |
+| `GET/PUT /attendance/permission-requests/*` | `attendance.approve` (semua event) \| `attendance.approve_own` (hanya event yang dikelola) | Approval, lihat §6.2 |
+| `DELETE /attendance/permission-requests/:id` | `attendance.approve` | Hapus pengajuan |
 | `POST /permission-requests`, `GET /permission-requests/me` | `permission.submit` | Ajukan & riwayat |
 | `GET /users/import/template`, `POST /users/import` | `users.import` | Bulk import |
 | `GET /roles/:id/permissions`, `PUT /roles/:id/permissions` | `roles.edit` | Matrix replace-all |
@@ -266,7 +321,9 @@ function RequirePermission(ctx, code):
     return 403
 ```
 
-Permission awal: `settings.manage`, `users.view/create/edit/delete/import`, `roles.view/create/edit/delete`, `events.view/create/edit/delete`, `attendance.submit/approve`, `divisions.view/create/edit/delete`, `permission.submit`, `violations.view/manage`, `recruitment.manage`, `letters.view/manage`, `announcement.create`, `finance.view/create/edit/delete/categories/manage`, `finance.wallets.manage`, `storage.view/upload/delete/manage`.
+Permission awal: `settings.manage`, `users.view/create/edit/delete/import`, `roles.view/create/edit/delete`, `events.view/create/edit/delete`, `attendance.submit/approve/approve_own`, `divisions.view/create/edit/delete`, `permission.submit`, `permission.categories.manage`, `violations.view/manage`, `recruitment.manage`, `letters.view/manage`, `announcement.create`, `finance.view/create/edit/delete/categories/manage`, `finance.wallets.manage`, `storage.view/upload/delete/manage`.
+
+**Approval izin dua tingkat:** `attendance.approve` = semua event (Admin, PH); `attendance.approve_own` = hanya event yang dikelola (pembuat atau divisi penyelenggara). Seed menyebarkannya otomatis: pemegang `events.create` (PH/Kadiv/Sekdiv) mendapat `approve_own`, pemegang `attendance.approve` mendapat `permission.categories.manage`.
 
 Role **Bendahara** seed: semua `finance.*`.
 
@@ -291,14 +348,21 @@ Cron job tiap 1 menit (`jobs/cron.go`):
 - `upcoming → ongoing` saat `now >= start_time`
 - `ongoing → finished` saat `now >= end_time`
 
+Cron ini **satu-satunya** yang memindahkan status massal: `ListVisible` sengaja tidak lagi memanggil `TransitionStatuses` (dulu tiap GET menulis UPDATE). `GET /events/:id` masih menyinkronkan satu event agar detail selalu akurat.
+
+Event tanpa `end_time` memakai `endOfDay(start_time)` (23:59:59 di zona `start_time`) untuk perhitungan status, absensi, dan izin — jadi tidak ada event yang menggantung tanpa batas waktu.
+
 Jalankan sebagai proses terpisah: `go run ./cmd/backend cron`. Set `Logger`/`OnError`. Satu instance saja (tidak ada distributed lock).
 
 ### 6.2 Absensi & Perizinan
 - Absensi hanya jika `event.status == 'ongoing'`.
 - Upload selfie & signature ke MinIO; simpan **URL** di DB.
 - Approval: update `permission_requests` + `attendances` dalam **satu transaksi** (`*sql.Tx` + raw SQL sampai `WithTx` di-patch).
+- **Batas waktu izin:** pengajuan ditutup 3 jam sebelum event mulai (`PermissionLeadTime`; frontend memakai aturan sama di `lib/permission-deadline.ts` untuk menonaktifkan tombol + menjelaskan batasnya). Duplikat pengajuan yang ditolak boleh diajukan ulang, tapi tetap tunduk batas waktu ini.
+- **Bukti izin wajib gambar** dan dikonversi ke WebP di server (`internal/imageutil`), jadi storage tidak menampung JPEG/PNG mentah ukuran besar.
 - **Satu kali per event:** absen ditolak jika sudah ada attendance ATAU pengajuan izin pending/approved; pengajuan izin ditolak jika sudah tercatat hadir/izin ATAU ada pengajuan pending/approved (izin yang ditolak boleh diajukan ulang). Guard di `AttendanceService.Submit` & `PermissionRequestService.Create`.
 - `GET /attendance/permission_requests` (admin) mengembalikan **semua status** + ringkasan `user`/`event` (`ListAllDetailed`); `GET /permission_requests/me` menyertakan ringkasan `event` (`ListMineDetailed`). `DELETE /attendance/permission_requests/:id` (gate `attendance.approve`) menghapus pengajuan; attendance turunan review (permitted/rejected) ikut dihapus dalam satu transaksi — attendance hasil check-in (`present`) tidak disentuh.
+- **Cakupan approval izin:** `attendance.approve` = semua pengajuan; `attendance.approve_own` = hanya pengajuan dari event yang user kelola (`CanManageEvent`: pembuat, divisi penyelenggara, sistem admin). Penegakannya di `PermissionRequestService.CanReview`, dipakai oleh daftar (`ListReviewable`, satu query event lalu filter di memori) maupun aksi `Review` — jadi daftar dan tombol Setujui/Tolak tidak pernah berbeda pendapat. Menu "Approval Perizinan" tampil untuk salah satu dari kedua permission itu; tombol Hapus pengajuan tetap khusus approver global.
 - Form buat event di admin default `allow_permission = true`; matikan per event bila izin tidak berlaku.
 - Profil (`PUT /me`): field `email` bisa diubah pemilik akun — divalidasi format + unik (case-insensitive, disimpan lowercase).
 
@@ -308,8 +372,8 @@ Jalankan sebagai proses terpisah: `go run ./cmd/backend cron`. Set `Logger`/`OnE
 3. Render `number_format_template` → `letter_code`:
    - **Placeholder sistem (auto):** `{number}` (default 3 digit: 001, 002, …), `{number:N}` (zero-pad eksplisit), `{code}`, `{month_roman}`, `{year}`, alias `{nomor}`, `{letter_code}`. Gunakan `{number:0}` untuk nomor tanpa zero-pad.
    - **Placeholder custom (input per surat):** segmen dinamis seperti `{unit}`, `{tujuan}` — wajib diisi di form surat keluar; nilai disimpan di `variable_values`.
-   - **Teks literal** di template (mis. `HIMATRIS`) tetap statis per kategori.
-   - Contoh kategori `SPm-i` + template `{number:3}/{code}/{unit}/HIMATRIS/{month_roman}/{year}` → `001/SPm-i/PAN-Stuband/HIMATRIS/VII/2026`.
+   - **Teks literal** di template (mis. `Permikomnas Jateng`) tetap statis per kategori.
+   - Contoh kategori `SPm-i` + template `{number:3}/{code}/{unit}/Permikomnas Jateng/{month_roman}/{year}` → `001/SPm-i/PAN-Stuband/Permikomnas Jateng/VII/2026`.
    - Override manual `letter_code` diizinkan; counter tetap increment.
 4. Simpan letter + `variable_values` (JSON) — dipakai untuk nomor dan merge `.docx`.
 5. Merge `.docx` → upload MinIO → `document_url`.
@@ -333,7 +397,7 @@ if user lacks "events.view_all" AND settings.allow_cross_division_events_view ==
 ### 6.7 Organization Settings Singleton
 Service enforce max 1 row.
 
-**Kustomisasi tampilan** (kolom `appearance`, TEXT berisi JSON): parameter `style` (preset vega/nova/mala/lyra/mira/luma/sera/rhea — kurasi sendiri, bukan token registry premium shadcn), `base` (neutral/stone/zinc/gray/slate), `primary` (10 warna), `chart` (5 palet), `heading_font`/`text_font` (6 font Google via next/font, variabel `--font-*` di root layout), `radius` (rem). Frontend `lib/appearance.ts` menerjemahkan config → CSS variables `:root` + `.dark` yang di-inject sebagai `<style id="app-appearance">` (menimpa default base-mira di `globals.css`); `AppearanceSync` menerapkannya saat load, panel di `/admin/settings` menerapkan draft secara live sebelum disimpan lewat `PUT /settings` (field form `json`). `appearance` kosong/invalid → fallback tampilan bawaan.
+**Kustomisasi tampilan** (kolom `appearance`, TEXT berisi JSON): parameter `style` (preset vega/nova/mala/lyra/mira/luma/sera/rhea — kurasi sendiri, bukan token registry premium shadcn), `base` (neutral/stone/zinc/gray/slate), `primary` (11 warna, termasuk `indigo`), `chart` (5 palet), `heading_font`/`text_font` (6 font Google via next/font, variabel `--font-*` di root layout), `radius` (rem). Frontend `lib/appearance.ts` menerjemahkan config → CSS variables `:root` yang di-inject sebagai `<style id="app-appearance">` (menimpa default base-mira di `globals.css`); `AppearanceSync` menerapkannya saat load, panel di `/admin/settings` menerapkan draft secara live sebelum disimpan lewat `PUT /settings` (field form `json`). `appearance` kosong/invalid → fallback tampilan bawaan.
 
 ### 6.8 User Import
 Parse CSV/XLSX → validasi → bulk insert → email async.
@@ -352,13 +416,28 @@ Parse CSV/XLSX → validasi → bulk insert → email async.
 - Setelah restore: `SyncMissingPermissions` + `SyncMissingSeedData` (permission/kategori baru yang belum ada di ZIP lama).
 - Storage objek **tidak** dihapus massal — hanya di-upload ulang per key. UI mengarahkan login ulang karena JWT masih memegang user ID lama.
 
+### 6.11 Kalender Event (anggota)
+
+`components/member/schedule-calendar.tsx` — grid bulan ala Google Calendar, dipakai di dashboard anggota dan tab **Kalender** di `/events` (toggle Daftar | Kalender).
+
+- Event dipetakan ke **rentang hari** (`start`–`end`, inklusif). Event yang selesai tepat 00:00 tidak menambah satu hari.
+- Tiap minggu dipotong jadi segmen per-event lalu disusun ke baris (`lane`) dengan greedy — baris pertama yang masih bebas, sehingga tidak ada chip bertumpuk.
+- Chip dirender **absolut** dengan lebar `span/7` dari lebar baris; karena semua kolom selebar sama, bar merentang tepat dari tepi kolom hari pertama sampai tepi kolom hari terakhir tanpa perlu mengukur DOM. Minggu pertama/terakhir yang terpotong memakai sudut rata (tanda bar berlanjut) dan muncul lagi di baris minggu berikutnya.
+- Maksimal **3 baris** chip per hari; sisanya diringkas `+N lagi` di dalam sel hari (klik tanggal → agenda hari itu menampilkan semua).
+- Warna chip = **divisi pembuat event** (`created_by_division_id`, dilengkapi `EventsWithAudience` sekali load user — bukan penyelenggara `division_id`): latar `color-mix(in oklab, var(--division-N) 16%, var(--card))`, garis kiri 3px warna penuh, teks tetap `card-foreground` supaya kontras tidak bergantung warna divisi.
+- Warna bisa dipilih admin per divisi di menu **Divisi** (8 token `--division-1..8`); divisi yang belum dipilih dibagi otomatis oleh `lib/division-color.ts` — warna eksplisit dipakai lebih dulu, sisanya diberi token yang belum terpakai (urut id) supaya tidak ada dua divisi berwarna sama selama token masih cukup. Satu divisi selalu berwarna sama di dashboard, `/events`, dan setelah difilter. `ponytail:` >8 divisi akan mengulang warna.
+- `DivisionLegend` (dipakai dashboard + tab Kalender `/events`) menampilkan seluruh divisi + penanda **Divisi Anda** dari `/me`; entri abu "Tanpa divisi" hanya muncul kalau ada event tanpa divisi pembuat.
+- Status terlihat lewat titik di awal chip (`ongoing`/`upcoming`/`finished`/`cancelled`) plus `StatusBadge` di agenda; event `cancelled` dicoret.
+- Di layar < 640px chip `pointer-events-none` (target ketuk = sel hari, bukan chip 22px).
+
 ## 7. Seed Data
 
 - 1 user Admin + role `Admin` (`is_system: true`, semua permission).
 - Daftar `permissions` lengkap §5.
-- 1 row `organization_settings` (`theme: system`).
+- 1 row `organization_settings` (`theme: light`).
 - Contoh `letter_categories` (`UND`, `SK`).
 - Divisi demo.
+- `SyncMissingSeedData` memberi `events.create/edit/delete` ke role **Kadiv** & **Sekdiv** (idempoten, hanya kalau role-nya ada) — pengurus divisi mengelola kegiatan sendiri tanpa membuka panel admin penuh.
 
 **Production:** password admin kuat via env; tolak default dev.
 
@@ -371,7 +450,9 @@ Parse CSV/XLSX → validasi → bulk insert → email async.
 5. Endpoint publik recruitment & settings.
 6. Service counter surat + merge dokumen + OCR.
 7. Scheduler status event.
-8. Hapus model demo scaffold (`Post`, `Tag`) sebelum domain model.
+8. Kolom `division.color` (migrasi `20260929000000_division_color.sql`) — warna divisi untuk chip/legend kalender.
+9. Tabel `permission_category` + kolom `permission_request.category_id` (migrasi `20260930000000_permission_category.sql`), termasuk seed kategori Sakit/Izin dan backfill pengajuan lama ke 'Izin'.
+10. Hapus model demo scaffold (`Post`, `Tag`) sebelum domain model.
 
 ## 9. File Storage (MinIO / S3)
 
@@ -427,7 +508,7 @@ backups/{date}-{id}.zip
 | Primary key | `bigint` / `int64` identity (bukan UUID) |
 | Frontend | Satu app Next.js, route groups `(auth)` / `(member)` / `(admin)` |
 | UI kit | shadcn/ui preset `base-mira` saja |
-| Theme settings | Appearance mode light/dark/system |
+| Theme settings | Selalu terang (putih). Dark mode dihapus: token `.dark` dibuang, `forcedTheme="light"`, `ThemeSync` dihapus. Varian `dark:` bawaan komponen shadcn tetap terdefinisi tapi inert (`.dark` tidak pernah dipasang) |
 | Login identifier | Username utama; email fallback |
 | Auth | JWT + httpOnly cookie (+ token di body) |
 | Dual role | System admin + custom Role/Permission |
@@ -435,6 +516,13 @@ backups/{date}-{id}.zip
 | Organization settings | Singleton |
 | Transaksi kritis | `*sql.Tx` + FOR UPDATE sampai WithTx patched |
 | ORM access | `orm.*` + request context; larang `models.*` scaffold |
+| Event tanpa waktu selesai | `end_time` = penghujung hari `start_time` (zona start); diisi UI, backend hanya fallback |
+| Aksen aplikasi | Indigo korporat `oklch(0.45 0.13 264)` (`--primary`); palet divisi dijaga berjarak oklab >= 0.16 dari aksen |
+| Kategori izin | Master data `permission_category` + menu admin; pengajuan wajib memilih kategori |
+| Batas ajukan izin | 3 jam sebelum event mulai (server + UI memakai aturan yang sama) |
+| Approval izin | Dua tingkat: `attendance.approve` (semua event) vs `attendance.approve_own` (event yang dikelola sendiri, otomatis untuk pemegang `events.create`) |
+| Bukti izin | Wajib gambar, dinormalkan ke WebP lossy + perkecil 1600 px di server (libwebp via WASM, tanpa cgo) |
+| Warna chip kalender | Divisi **pembuat** event (`created_by_division_id`); warna per divisi diatur admin (`division.color`, token `--division-1..8`), sisanya otomatis dari daftar divisi sehingga stabil di semua halaman |
 
 ## 13. Roadmap Pengembangan
 
@@ -453,7 +541,7 @@ backups/{date}-{id}.zip
 
 ### Fase 2 — Fondasi frontend
 - Bersihkan halaman demo Next
-- Route groups + theme provider (light/dark/`system` dari settings)
+- Route groups + provider tema (dikunci terang)
 - API client terpusat; form (react-hook-form + zod selaras backend)
 - Sidebar permission-driven dari `app-sidebar` (sidebar-08)
 - Tambah komponen shadcn: table, dialog, select, card, badge, tabs, sonner, chart, dll. via CLI
