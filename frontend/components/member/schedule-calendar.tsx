@@ -249,7 +249,15 @@ export function ScheduleCalendar({
   )
 
   return (
-    <div className={cn("grid gap-4 lg:grid-cols-[1.4fr_1fr]", className)}>
+    <div
+      className={cn(
+        // `grid-cols-1` penting: tanpa itu kolom implisit berukuran `auto`,
+        // sehingga konten kalender bisa melebarkan kolom melewati lebar layar
+        // (overflow horizontal di 390px).
+        "grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]",
+        className
+      )}
+    >
       <div className="rounded-2xl border bg-card p-2 sm:p-4">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div>
