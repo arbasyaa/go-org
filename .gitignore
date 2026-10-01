@@ -54,3 +54,7 @@ coverage/
 *.pem
 *.key
 /storage/
+
+# Dokumen internal: data pribadi anggota (mis. xlsx formatur) & daftar kredensial
+# akun. Jangan pernah di-commit.
+/docs/
