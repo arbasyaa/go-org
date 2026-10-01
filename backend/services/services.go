@@ -110,6 +110,7 @@ func userPayload(ctx context.Context, u *models.User) map[string]any {
 		"full_name": u.FullName, "avatar_url": u.AvatarURL,
 		"division_id": u.DivisionID, "role_id": u.RoleID, "status": u.Status,
 		"hometown": u.Hometown, "phone": u.Phone,
+		"jabatan": u.Jabatan, "asal_himpunan": u.AsalHimpunan,
 	}
 	if u.BirthDate != nil {
 		out["birth_date"] = u.BirthDate.Format("2006-01-02")
@@ -232,6 +233,7 @@ func enrichUsers(ctx context.Context, users []*models.User) []map[string]any {
 			"division_id": u.DivisionID, "role_id": u.RoleID, "status": u.Status,
 			"created_at": u.CreatedAt, "updated_at": u.UpdatedAt,
 			"phone": u.Phone, "hometown": u.Hometown,
+			"jabatan": u.Jabatan, "asal_himpunan": u.AsalHimpunan,
 		}
 		if name, ok := divMap[u.DivisionID]; ok {
 			item["division"] = name
@@ -320,6 +322,7 @@ func (UserService) ImportCSV(ctx context.Context, rows []map[string]string) (suc
 		_, err := UserService{}.Create(ctx, &models.User{
 			Username: row["username"], Email: row["email"], FullName: row["full_name"],
 			DivisionID: divs[0].ID, RoleID: roles[0].ID, Phone: row["phone"],
+			Hometown: row["hometown"], Jabatan: row["jabatan"], AsalHimpunan: row["asal_himpunan"],
 		}, pwd)
 		if err != nil {
 			failures = append(failures, map[string]string{"row": row["username"], "error": err.Error()})

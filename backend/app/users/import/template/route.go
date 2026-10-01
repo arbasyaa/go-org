@@ -14,7 +14,7 @@ func GET(ctx *views.Context) error {
 		if !ok {
 			return c.Error(403, "forbidden")
 		}
-		csv := "username,email,full_name,division,role,password,phone\n"
+		csv := "username,email,full_name,division,role,password,phone,hometown,jabatan,asal_himpunan\n"
 		c.Writer.Header().Set("Content-Type", "text/csv")
 		c.Writer.Header().Set("Content-Disposition", "attachment; filename=users_template.csv")
 		_, err := c.Writer.Write([]byte(csv))

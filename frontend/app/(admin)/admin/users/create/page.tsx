@@ -45,6 +45,8 @@ export default function CreateUserPage() {
     full_name: "",
     division_id: "",
     role_id: "",
+    jabatan: "",
+    asal_himpunan: "",
   })
   const [saving, setSaving] = useState(false)
 
@@ -118,6 +120,24 @@ export default function CreateUserPage() {
                     value={form.full_name}
                     onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                     required
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Jabatan</FieldLabel>
+                  <Input
+                    value={form.jabatan}
+                    onChange={(e) => setForm({ ...form, jabatan: e.target.value })}
+                    placeholder="Kepala Divisi"
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Asal Himpunan</FieldLabel>
+                  <Input
+                    value={form.asal_himpunan}
+                    onChange={(e) =>
+                      setForm({ ...form, asal_himpunan: e.target.value })
+                    }
+                    placeholder="HIMATIF UMNU"
                   />
                 </Field>
                 <Field>

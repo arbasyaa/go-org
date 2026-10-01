@@ -25,6 +25,9 @@ const TEMPLATE_COLUMNS = [
   ["role", "Ya", "Anggota (nama role harus sudah ada)"],
   ["password", "Tidak", "kosongkan = changeme123"],
   ["phone", "Tidak", "081234567890"],
+  ["hometown", "Tidak", "Daerah 3"],
+  ["jabatan", "Tidak", "Kepala Divisi"],
+  ["asal_himpunan", "Tidak", "HIMATIF UMNU"],
 ] as const
 
 type ImportResult = {
@@ -41,8 +44,30 @@ export default function ImportUsersPage() {
     try {
       const XLSX = await import("xlsx")
       const rows = [
-        ["username", "email", "full_name", "division", "role", "password", "phone"],
-        ["johndoe", "john@example.com", "John Doe", "Umum", "Anggota", "Rahasia123", "081234567890"],
+        [
+          "username",
+          "email",
+          "full_name",
+          "division",
+          "role",
+          "password",
+          "phone",
+          "hometown",
+          "jabatan",
+          "asal_himpunan",
+        ],
+        [
+          "johndoe",
+          "john@example.com",
+          "John Doe",
+          "Umum",
+          "Anggota",
+          "Rahasia123",
+          "081234567890",
+          "Semarang",
+          "Anggota Divisi",
+          "HIMATIF UMNU",
+        ],
       ]
       const ws = XLSX.utils.aoa_to_sheet(rows)
       ws["!cols"] = [
@@ -53,6 +78,9 @@ export default function ImportUsersPage() {
         { wch: 14 },
         { wch: 14 },
         { wch: 16 },
+        { wch: 16 },
+        { wch: 18 },
+        { wch: 22 },
       ]
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, "Pengguna")

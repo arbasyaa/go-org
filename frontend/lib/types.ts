@@ -14,6 +14,8 @@ export interface User {
   full_name: string
   birth_date?: string | null
   hometown?: string | null
+  jabatan?: string | null
+  asal_himpunan?: string | null
   phone?: string | null
   avatar_url?: string | null
   division_id?: number | null
