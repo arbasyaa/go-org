@@ -15,7 +15,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHasAny(c, user, "events.create", "events.edit")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		data, err := services.UserService{}.AudienceCatalog(c.Request.Context())
 		if err != nil {

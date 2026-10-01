@@ -16,7 +16,7 @@ func GET(ctx *views.Context) error {
 		ok, _ := permission.UserHasAny(c, user,
 			"finance.view", "finance.create", "finance.edit")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		wallets, err := services.FinanceService{}.ListWallets(c.Request.Context())
 		if err != nil {
@@ -31,7 +31,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "finance.wallets.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var body struct {
 			Name           string  `json:"name"`

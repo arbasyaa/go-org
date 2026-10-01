@@ -18,14 +18,14 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "users.import")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		if err := c.ParseMultipart(10 << 20); err != nil {
 			return c.Error(400, err.Error())
 		}
 		file, _, err := c.FormFile("file")
 		if err != nil {
-			return c.Error(400, "file required")
+			return c.Error(400, "file wajib diunggah")
 		}
 		defer file.Close()
 		data, err := io.ReadAll(file)
@@ -35,7 +35,7 @@ func POST(ctx *views.Context) error {
 		reader := csv.NewReader(strings.NewReader(string(data)))
 		records, err := reader.ReadAll()
 		if err != nil || len(records) < 2 {
-			return c.Error(400, "invalid csv")
+			return c.Error(400, "format CSV tidak valid")
 		}
 		header := records[0]
 		idx := map[string]int{}

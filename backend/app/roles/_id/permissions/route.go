@@ -14,11 +14,11 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "roles.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		all, assigned, err := services.RoleService{}.GetPermissions(c.Request.Context(), id)
 		if err != nil {
@@ -35,11 +35,11 @@ func PUT(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "roles.edit")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		var body struct {
 			PermissionIDs []int64 `json:"permission_ids"`

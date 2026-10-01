@@ -12,7 +12,7 @@ func GET(ctx *views.Context) error {
 	return auth.RequireAuth(func(c *views.Context) error {
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		list, err := services.AnnouncementService{}.GetAttachments(c.Request.Context(), id)
 		if err != nil {

@@ -12,7 +12,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "users.import")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		csv := "username,email,full_name,division,role,password,phone,hometown,jabatan,asal_himpunan\n"
 		c.Writer.Header().Set("Content-Type", "text/csv")

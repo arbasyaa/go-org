@@ -15,14 +15,14 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "letters.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		if err := c.ParseMultipart(30 << 20); err != nil {
 			return c.Error(400, err.Error())
 		}
 		file, hdr, err := c.FormFile("file")
 		if err != nil {
-			return c.Error(400, "file required")
+			return c.Error(400, "file wajib diunggah")
 		}
 		defer file.Close()
 		data, err := io.ReadAll(file)
@@ -35,10 +35,10 @@ func POST(ctx *views.Context) error {
 		}
 		code, detected := letterutil.DetectLetterCode(text)
 		return c.Success(200, "parsed", map[string]any{
-			"letter_code":     code,
-			"extracted_text":  text,
-			"detected":        detected,
-			"method":          method,
+			"letter_code":    code,
+			"extracted_text": text,
+			"detected":       detected,
+			"method":         method,
 		})
 	})(ctx)
 }

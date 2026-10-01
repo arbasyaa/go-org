@@ -13,7 +13,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "permission.submit")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		list, err := services.PermissionRequestService{}.ListMineDetailed(c.Request.Context(), user.ID)
 		if err != nil {

@@ -16,7 +16,7 @@ func GET(ctx *views.Context) error {
 		canApproveAll, _ := permission.UserHas(c, user, "attendance.approve")
 		canApproveOwn, _ := permission.UserHas(c, user, "attendance.approve_own")
 		if !canApproveAll && !canApproveOwn {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		// approve_own (Kadiv/Sekdiv pemilik event) hanya menerima pengajuan dari
 		// event yang mereka kelola, bukan seluruh organisasi.

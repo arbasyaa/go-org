@@ -13,7 +13,7 @@ import (
 func GET(ctx *views.Context) error {
 	s, err := services.SettingsService{}.GetPublic(ctx.Request.Context())
 	if err != nil {
-		return ctx.Error(404, "settings not found")
+		return ctx.Error(404, "pengaturan tidak ditemukan")
 	}
 	return ctx.Success(200, "settings", map[string]any{
 		"web_name": s.WebName, "logo_url": s.LogoURL, "icon_url": s.IconURL,
@@ -34,7 +34,7 @@ func putSettings(ctx *views.Context) error {
 		return ctx.Error(500, err.Error())
 	}
 	if !ok {
-		return ctx.Error(403, "forbidden")
+		return ctx.Error(403, "akses ditolak")
 	}
 	if err := ctx.ParseMultipart(10 << 20); err != nil {
 		return ctx.Error(400, err.Error())

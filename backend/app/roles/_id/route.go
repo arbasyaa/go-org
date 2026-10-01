@@ -21,11 +21,11 @@ func PUT(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "roles.edit")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		var body map[string]any
 		if err := c.Bind(&body); err != nil {
@@ -46,11 +46,11 @@ func DELETE(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "roles.delete")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		if err := (services.RoleService{}).Delete(c.Request.Context(), id); err != nil {
 			return deleteError(c, err, "role")

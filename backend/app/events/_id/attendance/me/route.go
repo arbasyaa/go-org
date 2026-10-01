@@ -14,7 +14,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "attendance.submit")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		eventID, err := models.ParseID(c.Param("id"))
 		if err != nil {
@@ -22,7 +22,7 @@ func GET(ctx *views.Context) error {
 		}
 		a, err := services.AttendanceService{}.GetMine(c.Request.Context(), eventID, user.ID)
 		if err != nil {
-			return c.NotFound()
+			return c.Error(404, "data tidak ditemukan")
 		}
 		return c.Success(200, "attendance", a)
 	})(ctx)

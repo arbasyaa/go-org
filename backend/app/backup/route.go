@@ -41,7 +41,7 @@ func exportBackup(ctx *views.Context) error {
 	user, _ := auth.CurrentUser(ctx.Request.Context())
 	ok, _ := permission.UserHas(ctx, user, "backup.manage")
 	if !ok {
-		return ctx.Error(403, "forbidden")
+		return ctx.Error(403, "akses ditolak")
 	}
 	reqCtx := ctx.Request.Context()
 	payload, err := services.BackupService{}.ExportJSON(reqCtx)
@@ -143,7 +143,7 @@ func exportBackup(ctx *views.Context) error {
 		return ctx.Error(500, err.Error())
 	}
 	ctx.Writer.Header().Set("Content-Type", "application/zip")
-	ctx.Writer.Header().Set("Content-Disposition", `attachment; filename="myorg-backup.zip"`)
+	ctx.Writer.Header().Set("Content-Disposition", `attachment; filename="permi-backup.zip"`)
 	ctx.Writer.WriteHeader(200)
 	_, _ = ctx.Writer.Write(buf.Bytes())
 	return nil
@@ -153,14 +153,14 @@ func importBackup(ctx *views.Context) error {
 	user, _ := auth.CurrentUser(ctx.Request.Context())
 	ok, _ := permission.UserHas(ctx, user, "backup.manage")
 	if !ok {
-		return ctx.Error(403, "forbidden")
+		return ctx.Error(403, "akses ditolak")
 	}
 	if err := ctx.ParseMultipart(200 << 20); err != nil {
 		return ctx.Error(400, err.Error())
 	}
 	file, _, err := ctx.FormFile("file")
 	if err != nil {
-		return ctx.Error(400, "file required")
+		return ctx.Error(400, "file wajib diunggah")
 	}
 	defer file.Close()
 	data, err := io.ReadAll(file)

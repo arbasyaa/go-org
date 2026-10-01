@@ -14,15 +14,15 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "users.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		u, err := services.UserService{}.Get(c.Request.Context(), id)
 		if err != nil {
-			return c.NotFound()
+			return c.Error(404, "data tidak ditemukan")
 		}
 		return c.Success(200, "user", services.UserService{}.PublicView(c.Request.Context(), u))
 	})(ctx)
@@ -33,11 +33,11 @@ func PUT(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "users.edit")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		var body map[string]any
 		if err := c.Bind(&body); err != nil {
@@ -58,11 +58,11 @@ func DELETE(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "users.delete")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		if err := (services.UserService{}).Delete(c.Request.Context(), id); err != nil {
 			return c.Error(500, err.Error())

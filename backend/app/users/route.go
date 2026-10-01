@@ -15,7 +15,7 @@ func GET(ctx *views.Context) error {
 		// Daftar user juga dibutuhkan dropdown form pencatatan pelanggaran.
 		ok, err := permission.UserHasAny(c, user, "users.view", "violations.manage")
 		if err != nil || !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		list, err := services.UserService{}.ListPublic(c.Request.Context(), c.Query("status"))
 		if err != nil {
@@ -30,7 +30,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, err := permission.UserHas(c, user, "users.create")
 		if err != nil || !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var body struct {
 			Username     string `json:"username"`

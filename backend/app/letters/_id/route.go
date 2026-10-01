@@ -18,15 +18,15 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "letters.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		letter, err := services.LetterService{}.Get(c.Request.Context(), id)
 		if err != nil {
-			return c.NotFound()
+			return c.Error(404, "data tidak ditemukan")
 		}
 		return c.Success(200, "letter", letter)
 	})(ctx)
@@ -37,11 +37,11 @@ func PUT(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "letters.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		values := map[string]any{}
 		ct := c.Request.Header.Get("Content-Type")
@@ -96,11 +96,11 @@ func DELETE(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "letters.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		svc := services.LetterService{}
 		if err := svc.Delete(c.Request.Context(), id); err != nil {

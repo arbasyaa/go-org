@@ -23,19 +23,19 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "events.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		canViewAll, _ := permission.UserHas(c, user, "events.view_all")
 		e, err := services.EventService{}.GetForUser(c.Request.Context(), id, user, canViewAll)
 		if err == services.ErrForbidden {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		if err != nil {
-			return c.NotFound()
+			return c.Error(404, "data tidak ditemukan")
 		}
 		return c.Success(200, "event", e)
 	})(ctx)
@@ -58,18 +58,18 @@ func PUT(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "events.edit")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		allowed, err := canEditEvent(c, user, id)
 		if err != nil {
-			return c.Error(404, "event not found")
+			return c.Error(404, "event tidak ditemukan")
 		}
 		if !allowed {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 
 		values := map[string]any{}
@@ -189,18 +189,18 @@ func DELETE(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "events.delete")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		allowed, err := canEditEvent(c, user, id)
 		if err != nil {
-			return c.Error(404, "event not found")
+			return c.Error(404, "event tidak ditemukan")
 		}
 		if !allowed {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		if err := (services.EventService{}).Delete(c.Request.Context(), id); err != nil {
 			return c.Error(500, err.Error())

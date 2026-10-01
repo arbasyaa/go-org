@@ -14,7 +14,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "roles.view")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		all, err := orm.Objects[models.Permission](c.Request.Context()).OrderBy("module", "code").All()
 		if err != nil {

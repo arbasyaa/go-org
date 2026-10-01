@@ -15,11 +15,11 @@ func PUT(ctx *views.Context) error {
 		canApproveAll, _ := permission.UserHas(c, user, "attendance.approve")
 		canApproveOwn, _ := permission.UserHas(c, user, "attendance.approve_own")
 		if !canApproveAll && !canApproveOwn {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		var body struct {
 			Action string `json:"action"`
@@ -47,11 +47,11 @@ func DELETE(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "attendance.approve")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		id, err := models.ParseID(c.Param("id"))
 		if err != nil {
-			return c.Error(400, "invalid id")
+			return c.Error(400, "id tidak valid")
 		}
 		if err := (services.PermissionRequestService{}).Delete(c.Request.Context(), id); err != nil {
 			return c.Error(400, err.Error())

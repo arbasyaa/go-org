@@ -14,7 +14,7 @@ func GET(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHasAny(c, user, "violations.view", "violations.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		list, err := services.ViolationTypeService{}.List(c.Request.Context())
 		if err != nil {
@@ -29,7 +29,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "violations.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var body models.ViolationType
 		if err := c.Bind(&body); err != nil {

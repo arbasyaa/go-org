@@ -69,7 +69,7 @@ func truncateBackupTablesSQL() string {
 func (BackupService) ExportJSON(ctx context.Context) (map[string]any, error) {
 	db := orm.DBFromContext(ctx)
 	if db == nil {
-		return nil, fmt.Errorf("no database in context")
+		return nil, fmt.Errorf("koneksi database tidak tersedia")
 	}
 	payload := map[string]any{}
 	for _, t := range backupTables {
@@ -186,7 +186,7 @@ func (BackupService) RestoreJSON(ctx context.Context, payload map[string]json.Ra
 	stats := map[string]int{}
 	err := orm.WithTx(ctx, func(txCtx context.Context, tx *orm.Tx) error {
 		if _, err := tx.ExecContext(txCtx, truncateBackupTablesSQL()); err != nil {
-			return fmt.Errorf("truncate: %w", err)
+			return fmt.Errorf("gagal mengosongkan tabel: %w", err)
 		}
 		userIDs := map[int64]struct{}{}
 		for _, t := range backupTables {

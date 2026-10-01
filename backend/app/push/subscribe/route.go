@@ -42,7 +42,7 @@ func createSubscription(ctx *views.Context) error {
 		return views.BadRequest(err.Error())
 	}
 	if body.Endpoint == "" {
-		return views.BadRequest("endpoint required")
+		return views.BadRequest("endpoint wajib diisi")
 	}
 	existing, err := orm.Objects[models.PushSubscription](ctx.Request.Context()).
 		Filter("endpoint", body.Endpoint).First()

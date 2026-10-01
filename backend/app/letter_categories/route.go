@@ -16,7 +16,7 @@ func GET(ctx *views.Context) error {
 		// untuk filter/label — selaras dengan gate GET /letters.
 		ok, _ := permission.UserHasAny(c, user, "letters.view", "letters.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		list, err := services.LetterService{}.ListCategories(c.Request.Context())
 		if err != nil {
@@ -31,7 +31,7 @@ func POST(ctx *views.Context) error {
 		user, _ := auth.CurrentUser(c.Request.Context())
 		ok, _ := permission.UserHas(c, user, "letters.manage")
 		if !ok {
-			return c.Error(403, "forbidden")
+			return c.Error(403, "akses ditolak")
 		}
 		var body models.LetterCategory
 		if err := c.Bind(&body); err != nil {
