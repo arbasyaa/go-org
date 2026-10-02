@@ -27,7 +27,7 @@ import type { Role } from "@/lib/types"
 
 export default function AdminRolesPage() {
   const router = useRouter()
-  const { data, loading, error } = useApi(async () => {
+  const { data, loading, error, refetch } = useApi(async () => {
     const result = await apiRequest<Role[] | { items: Role[] }>("/roles")
     return unwrapList(result)
   })
@@ -76,7 +76,7 @@ export default function AdminRolesPage() {
       await apiRequest(`/roles/${deleting.id}`, { method: "DELETE" })
       toast.success("Role dihapus")
       setDeleting(null)
-      void router.refresh()
+      void refetch()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal menghapus")
     }
@@ -115,7 +115,7 @@ export default function AdminRolesPage() {
               size="sm"
               render={<Link href={`/admin/roles/${row.original.id}/edit`} />}
             >
-              Edit Matrix
+              Edit
             </Button>
             {!row.original.is_system ? (
               <Button
@@ -157,7 +157,7 @@ export default function AdminRolesPage() {
         open={open}
         onOpenChange={setOpen}
         title="Tambah Role"
-        description="Setelah dibuat, Anda akan diarahkan ke matrix permission."
+        description="Setelah dibuat, Anda akan diarahkan ke halaman edit role."
         onSubmit={handleCreate}
         saving={saving}
       >

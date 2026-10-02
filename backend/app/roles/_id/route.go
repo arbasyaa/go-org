@@ -9,7 +9,9 @@ import (
 	"github.com/lrndwy/gokil/views"
 )
 
-func deleteError(c *views.Context, err error, label string) error {
+// writeError: 404 untuk baris yang tidak ada, 400 untuk penolakan aturan
+// (nama kosong / sudah dipakai). Sebelumnya semua error jadi 500.
+func writeError(c *views.Context, err error, label string) error {
 	if err == services.ErrNotFound {
 		return c.Error(404, label+" tidak ditemukan")
 	}
@@ -27,13 +29,18 @@ func PUT(ctx *views.Context) error {
 		if err != nil {
 			return c.Error(400, "id tidak valid")
 		}
-		var body map[string]any
+		// Struct bertipe, bukan map bebas: body mentah sempat bisa menulis kolom
+		// apa pun (mis. is_system) lewat mass assignment.
+		var body struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+		}
 		if err := c.Bind(&body); err != nil {
 			return c.Error(400, err.Error())
 		}
-		r, err := services.RoleService{}.Update(c.Request.Context(), id, body)
+		r, err := services.RoleService{}.Update(c.Request.Context(), id, body.Name, body.Description)
 		if err != nil {
-			return c.Error(500, err.Error())
+			return writeError(c, err, "role")
 		}
 		services.LogActivity(c.Request.Context(), user.ID, "update", "role", id,
 			"Memperbarui role", c.Request.RemoteAddr)
@@ -53,7 +60,7 @@ func DELETE(ctx *views.Context) error {
 			return c.Error(400, "id tidak valid")
 		}
 		if err := (services.RoleService{}).Delete(c.Request.Context(), id); err != nil {
-			return deleteError(c, err, "role")
+			return writeError(c, err, "role")
 		}
 		services.LogActivity(c.Request.Context(), user.ID, "delete", "role", id,
 			"Menghapus role", c.Request.RemoteAddr)

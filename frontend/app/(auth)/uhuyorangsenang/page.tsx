@@ -10,9 +10,12 @@ import { serverPublicGet } from "@/lib/server-api"
  * `allow_self_register = false` (bawaan) membuat halaman ini 404, sesuai PRD
  * §2.1: pendaftaran publik disembunyikan dan user hanya ditambah admin.
  */
+export const dynamic = "force-dynamic"
+
 export default async function RegisterPage() {
   const settings = await serverPublicGet<{ allow_self_register?: boolean }>("/settings")
-  if (!settings?.allow_self_register) notFound()
+  if (!settings) throw new Error("pengaturan organisasi belum tersedia")
+  if (!settings.allow_self_register) notFound()
 
   return <SignupForm />
 }

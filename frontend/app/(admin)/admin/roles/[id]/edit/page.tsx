@@ -7,6 +7,10 @@ import { PageHeader } from "@/components/page-header"
 import { ErrorState, LoadingState } from "@/components/page-states"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import {
@@ -15,7 +19,7 @@ import {
   type PermissionScope,
 } from "@/lib/permission-scopes"
 import { unwrapList } from "@/lib/format"
-import type { Permission } from "@/lib/types"
+import type { Permission, Role } from "@/lib/types"
 
 interface RolePermissionsResponse {
   permissions?: Permission[]
@@ -40,10 +44,25 @@ export default function EditRolePage({
       unwrapList
     )
   )
+  // Detail role diambil dari daftar yang sudah ada — tidak perlu endpoint baru.
+  const rolesQuery = useApi(async () =>
+    unwrapList(await apiRequest<Role[] | { items: Role[] }>("/roles"))
+  )
   const [selectedOverride, setSelectedOverride] = useState<number[] | null>(
     null
   )
   const [saving, setSaving] = useState(false)
+  const [detailsOverride, setDetailsOverride] = useState<{
+    name: string
+    description: string
+  } | null>(null)
+  const [savingDetails, setSavingDetails] = useState(false)
+
+  const role = rolesQuery.data?.find((r) => r.id === Number(id))
+  const details = detailsOverride ?? {
+    name: role?.name ?? "",
+    description: role?.description ?? "",
+  }
 
   const baseSelected = data?.assigned_ids ?? data?.permission_ids ?? []
   const selected = selectedOverride ?? baseSelected
@@ -55,6 +74,20 @@ export default function EditRolePage({
         ? [...current, permissionId]
         : current.filter((pid) => pid !== permissionId)
     )
+  }
+
+  async function handleSaveDetails() {
+    setSavingDetails(true)
+    try {
+      await apiRequest(`/roles/${id}`, { method: "PUT", body: details })
+      toast.success("Role diperbarui")
+      setDetailsOverride(null)
+      void rolesQuery.refetch()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menyimpan")
+    } finally {
+      setSavingDetails(false)
+    }
   }
 
   async function handleSave() {
@@ -97,10 +130,52 @@ export default function EditRolePage({
         title="Edit Role"
         crumbs={[
           { label: "Role", href: "/admin/roles" },
-          { label: "Matrix Permission" },
+          { label: role?.name ?? "Edit" },
         ]}
       />
       <div className="flex flex-1 flex-col gap-6 p-4 pt-0">
+        <Card>
+          <CardHeader>
+            <CardTitle>Detail Role</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <FieldGroup>
+              <Field>
+                <FieldLabel>Nama Role</FieldLabel>
+                <Input
+                  value={details.name}
+                  onChange={(e) =>
+                    setDetailsOverride({ ...details, name: e.target.value })
+                  }
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Deskripsi</FieldLabel>
+                <Textarea
+                  value={details.description}
+                  onChange={(e) =>
+                    setDetailsOverride({
+                      ...details,
+                      description: e.target.value,
+                    })
+                  }
+                />
+              </Field>
+            </FieldGroup>
+            {role?.is_system ? (
+              <p className="text-xs text-muted-foreground">
+                Role sistem (Admin): boleh diganti namanya, tapi permission-nya
+                selalu penuh dan tidak bisa dikurangi lewat matrix di bawah.
+              </p>
+            ) : null}
+            <div>
+              <Button onClick={handleSaveDetails} disabled={savingDetails}>
+                {savingDetails ? "Menyimpan..." : "Simpan Detail"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {loading || allPermissions.loading ? <LoadingState rows={6} /> : null}
         {error ? <ErrorState message={error} /> : null}
 

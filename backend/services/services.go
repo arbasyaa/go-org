@@ -374,8 +374,28 @@ func (RoleService) Create(ctx context.Context, name, description string) (*model
 	return orm.Create(ctx, &models.Role{Name: name, Description: description})
 }
 
-func (RoleService) Update(ctx context.Context, id int64, values map[string]any) (*models.Role, error) {
-	return orm.UpdateByID[models.Role](ctx, id, values)
+// Update mengganti nama/deskripsi role. Kolom lain (is_system, id) tidak ikut
+// bisa ditulis dari sini.
+func (RoleService) Update(ctx context.Context, id int64, name, description string) (*models.Role, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("nama role wajib diisi")
+	}
+	if _, err := orm.GetByID[models.Role](ctx, id); err != nil {
+		return nil, ErrNotFound
+	}
+	same, err := orm.Objects[models.Role](ctx).Filter("name", name).All()
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range same {
+		if r.ID != id {
+			return nil, fmt.Errorf("nama role %q sudah dipakai role lain", name)
+		}
+	}
+	return orm.UpdateByID[models.Role](ctx, id, map[string]any{
+		"name": name, "description": description,
+	})
 }
 
 func (RoleService) Delete(ctx context.Context, id int64) error {
