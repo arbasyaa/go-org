@@ -1,3 +1,7 @@
+# node_modules di-copy dari stage `deps` di Dockerfile, sehingga cek ini
+# selalu anggap deps stale dan mencoba purge node_modules saat `pnpm build`
+# — gagal di Docker karena tidak ada TTY (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY).
+verifyDepsBeforeRun: false
 allowBuilds:
   core-js: true
   sharp: true

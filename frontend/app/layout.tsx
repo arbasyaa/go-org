@@ -5,6 +5,7 @@ import {
   Manrope,
   Plus_Jakarta_Sans,
   Poppins,
+  Public_Sans,
   Space_Grotesk,
 } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
@@ -40,6 +41,13 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   display: "swap",
 })
+// Pasangan font landing page (frontend/DESIGN.md): display & body.
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+})
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   preload: false,
@@ -60,11 +68,46 @@ const fontVariables = [
   spaceGrotesk.variable,
   jakarta.variable,
   lora.variable,
+  publicSans.variable,
 ].join(" ")
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+
 export const metadata: Metadata = {
-  title: "Permikomnas Jawa Tengah",
-  description: "Sistem Informasi Manajemen Organisasi",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "PERMIKOMNAS Jawa Tengah",
+    template: "%s | PERMIKOMNAS Jawa Tengah",
+  },
+  description:
+    "Perhimpunan Mahasiswa Informatika dan Komputer Nasional Wilayah VII Jawa Tengah — rumah bersama himpunan mahasiswa informatika dan komputer se-Jawa Tengah.",
+  keywords: [
+    "PERMIKOMNAS",
+    "Jawa Tengah",
+    "himpunan mahasiswa informatika",
+    "organisasi mahasiswa teknologi",
+    "Wilayah VII",
+  ],
+  applicationName: "PERMIKOMNAS Jawa Tengah",
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    url: siteUrl,
+    siteName: "PERMIKOMNAS Jawa Tengah",
+    title: "PERMIKOMNAS Jawa Tengah",
+    description:
+      "Perhimpunan Mahasiswa Informatika dan Komputer Nasional Wilayah VII Jawa Tengah — rumah bersama himpunan mahasiswa informatika dan komputer se-Jawa Tengah.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PERMIKOMNAS Jawa Tengah",
+    description:
+      "Perhimpunan Mahasiswa Informatika dan Komputer Nasional Wilayah VII Jawa Tengah — rumah bersama himpunan mahasiswa informatika dan komputer se-Jawa Tengah.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function RootLayout({
