@@ -132,43 +132,102 @@ export const memberDirectory: { city: string; members: string[] }[] = [
   { city: "Kudus", members: ["Himpunan Mahasiswa Informatika UIN Kudus"] },
 ]
 
-export const officials = [
+// Sumber: Data Diri FORMATUR BPW 26/27 (+ akun pengguna hasil impor) — jalur
+// PH, tiap divisi (Kadiv → Sekdiv → Anggota), lalu Koordinator Daerah.
+export const officialGroups = [
   {
-    name: "Raka Adi Pramudya",
-    role: "Ketua Badan Pengurus Wilayah",
-    origin: "Universitas Diponegoro",
+    division: "Pengurus Harian",
+    members: [
+      { name: "Ghani Al-Fatah", role: "Koordinator Wilayah", origin: "HIMTI UNSIQ" },
+      { name: "Mukhammad Khisanul Labib", role: "Wakil Koordinator Wilayah", origin: "HIMATIKA ITSNU Pekalongan" },
+      { name: "Arbasya Anandito", role: "Sekretaris Wilayah 1", origin: "HIMATRIS PNC" },
+      { name: "Dapa", role: "Sekretaris Wilayah 2", origin: "HMPTI Telkom University Purwokerto" },
+      { name: "Ica Danisa", role: "Bendahara Wilayah 1", origin: "HIMTI UNSIQ" },
+      { name: "Jamilun Nadif", role: "Bendahara Wilayah 2", origin: "HIMATEKNO UMPWR" },
+    ],
   },
   {
-    name: "Nadya Ayu Ramadhani",
-    role: "Sekretaris Wilayah",
-    origin: "Universitas Sebelas Maret",
+    division: "PSDM",
+    members: [
+      { name: "Seikha Najla", role: "Kepala Divisi", origin: "HIMATEKNO UMPWR" },
+      { name: "Rahmad Aris Setiawan", role: "Sekretaris Divisi", origin: "HMJ-I STT Ronggolawe" },
+      { name: "Faizal Abdila", role: "Anggota Divisi", origin: "HIMATIF UMNU" },
+      { name: "Solahudin Al-Ayubi", role: "Anggota Divisi", origin: "HMPSIF UNISNU" },
+      { name: "Apri Milandari Awiyama", role: "Anggota Divisi", origin: "HIMA TEKOM UHN" },
+      { name: "Indra Hermawan", role: "Anggota Divisi", origin: "HMIF UPS" },
+      { name: "M. Mundzir Adil Ardana", role: "Anggota Divisi", origin: "HIMATIF UMNU" },
+      { name: "Marta Safitri", role: "Anggota Divisi", origin: "HMSE Telkom University Purwokerto" },
+      { name: "Bima Andiansyah", role: "Anggota Divisi", origin: "UIN Walisongo Semarang" },
+      { name: "Fitriadita Hilal Majid", role: "Anggota Divisi", origin: "HIMFORMA UPGRIS" },
+      { name: "M. Rikza Alifika", role: "Anggota Divisi", origin: "UIN Walisongo Semarang" },
+    ],
   },
   {
-    name: "Salsabila Putri Handayani",
-    role: "Bendahara Wilayah",
-    origin: "Universitas Muhammadiyah Surakarta",
+    division: "Medkominfo",
+    members: [
+      { name: "M. Qistil Mizan", role: "Kepala Divisi", origin: "HIMATIKA ITSNU Pekalongan" },
+      { name: "Anindya Yuna Chamda", role: "Sekretaris Divisi", origin: "HIMATIKA ITSNU Pekalongan" },
+      { name: "Abdhe Rachmanzah", role: "Anggota Divisi", origin: "HMTIKA STIMIK Tunas Bangsa Banjarnegara" },
+      { name: "Muchamad Danang Prastyo", role: "Anggota Divisi", origin: "HIMANIFO UNIMMA" },
+      { name: "Dhafin Rifki Bayu Santoso", role: "Anggota Divisi", origin: "HMP MIKROPTIK UNS" },
+      { name: "Muhammad Fakih", role: "Anggota Divisi", origin: "HIMATIF UMPKU" },
+      { name: "Didi Purnomo", role: "Anggota Divisi", origin: "HMPS Informatika UIN Gusdur" },
+    ],
   },
   {
-    name: "Dimas Prasetyo Nugroho",
-    role: "Koordinator Bidang Organisasi dan Keanggotaan",
-    origin: "Universitas Dian Nuswantoro",
+    division: "IPTEK",
+    members: [
+      { name: "Bayu Prasetyo", role: "Kepala Divisi", origin: "HIMATIV UHN" },
+      { name: "Muhammad Alvin Hidayat", role: "Sekretaris Divisi", origin: "GENETIKA POLSA" },
+      { name: "Roya Firman Gani", role: "Anggota Divisi", origin: "GENETIKA POLSA" },
+      { name: "Nanda Bagus Priambodo", role: "Anggota Divisi", origin: "HMPTI Telkom University Purwokerto" },
+      { name: "Afif Abdurrohman Assidiq", role: "Anggota Divisi", origin: "HIMAFOR UNIMUS" },
+      { name: "Lilis Nuraeni", role: "Anggota Divisi", origin: "HIMA TI UNW" },
+      { name: "Farel Adi Nugraha Prastya", role: "Anggota Divisi", origin: "HM-TIF UNISSULA" },
+      { name: "Radita Putri Nuraini", role: "Anggota Divisi", origin: "HMSE Telkom University Purwokerto" },
+    ],
   },
   {
-    name: "Alya Rahmawati",
-    role: "Koordinator Bidang Akademik dan Riset",
-    origin: "Universitas Jenderal Soedirman",
+    division: "KWU",
+    members: [
+      { name: "Alhambra Fernando", role: "Kepala Divisi", origin: "HIMATEKNO UMPWR" },
+      { name: "Quratu Ayun Defaren", role: "Sekretaris Divisi", origin: "HMSE Telkom University Purwokerto" },
+      { name: "Aprilia Sahara", role: "Anggota Divisi", origin: "HIMATIKA ITSNU Pekalongan" },
+      { name: "Damanik, Yohanes Geovan Ondova", role: "Anggota Divisi", origin: "HMPTI Telkom University Purwokerto" },
+      { name: "Rachmat Hermansyah", role: "Anggota Divisi", origin: "HIMAFORTIC UNUGHA" },
+      { name: "Muchamad Fatchur Rachman", role: "Anggota Divisi", origin: "HIMATIF UMPKU" },
+      { name: "Herlina Zahra Nurhalisa", role: "Anggota Divisi", origin: "HMJTI Unwahas" },
+      { name: "Luriyanti Novika Purnama Sari", role: "Anggota Divisi", origin: "HIMFORMA UPGRIS" },
+      { name: "Refian Nazar Malik", role: "Anggota Divisi", origin: "HMTIKA STIMIK Tunas Bangsa Banjarnegara" },
+    ],
   },
   {
-    name: "Bayu Setiawan",
-    role: "Koordinator Bidang Komunikasi dan Informasi",
-    origin: "Politeknik Negeri Semarang",
+    division: "PR",
+    members: [
+      { name: "Afifatul Khusna", role: "Kepala Divisi", origin: "HM-TIF UNISSULA" },
+      { name: "Khadijah Nur Fatonah", role: "Sekretaris Divisi", origin: "HIMA TI UNW" },
+      { name: "M. Risqi Agung Pratama", role: "Anggota Divisi", origin: "HMPS Informatika UIN Gusdur" },
+      { name: "Bisma Wahyu Eka Pratama", role: "Anggota Divisi", origin: "HMJ-I STT Ronggolawe" },
+      { name: "Ahmad Dani Ajibal", role: "Anggota Divisi", origin: "HIMTI UNSIQ" },
+      { name: "Haydar Azka", role: "Anggota Divisi", origin: "HIMATIF UMNU" },
+      { name: "Durrotul Hidayatul Muna", role: "Anggota Divisi", origin: "HMJTI Unwahas" },
+      { name: "Nuril Anwar", role: "Anggota Divisi", origin: "HIMAFOR UNIMUS" },
+      { name: "Sintia Nur Mala Dewi", role: "Anggota Divisi", origin: "HMPSIF UNISNU" },
+      { name: "M. Dzaky Harpy Pratama", role: "Anggota Divisi", origin: "UIN Walisongo Semarang" },
+    ],
   },
   {
-    name: "Kirana Maheswari",
-    role: "Koordinator Bidang Humas dan Kemitraan",
-    origin: "Universitas Kristen Satya Wacana",
+    division: "Koordinator Daerah",
+    members: [
+      { name: "Achmad Fikr Mujahid", role: "Koordinator Daerah 1", origin: "HIMATIV UHN" },
+      { name: "Cikal Chrestella Cora", role: "Koordinator Daerah 2", origin: "HMSE Telkom University Purwokerto" },
+      { name: "Nabilla Ananta", role: "Koordinator Daerah 3", origin: "HIMFORMA UPGRIS" },
+      { name: "Riska Damayanti", role: "Koordinator Daerah 4", origin: "HMTIKA STIMIK Tunas Bangsa Banjarnegara" },
+      { name: "Arsya Fitrotul Firdaus", role: "Koordinator Daerah 5", origin: "HIMA Pro TI Universitas Muria Kudus" },
+      { name: "Galang Nur Seto", role: "Koordinator Daerah 6", origin: "HMP MIKROPTIK UNS" },
+    ],
   },
-]
+] as const
 
 export const recruitmentCta = {
   title: "Himpunanmu belum tergabung?",
