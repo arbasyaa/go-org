@@ -37,10 +37,43 @@
   background-size: 44px 44px;
 }
 
+/* Sama seperti auth-grid tapi versi inversi: garis kertas berpetak warna
+   parchment di atas bidang biru — dipakai panel hero & CTA landing. */
+@utility landing-grid {
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--landing-parchment) 10%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--landing-parchment) 10%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 44px 44px;
+}
+
 /* Dark mode dihapus: varian `dark:` tetap didefinisikan agar utility bawaan
    komponen shadcn tidak jatuh ke prefers-color-scheme, tapi `.dark` tidak
    pernah dipasang di <html> sehingga utility itu inert. */
 @custom-variant dark (&:is(.dark *));
+
+/* Token landing page (frontend/DESIGN.md): warna brand, radius, dan pasangan
+   font Publik Sans + Space Grotesk. Hex hanya hidup di sini, komponen landing
+   mereferensikan lewat var() agar konsisten dengan konvensi token proyek. */
+:root {
+  --landing-ink: #004fa1;
+  --landing-ink-deep: #003a75;
+  --landing-ink-soft: #848fbb;
+  --landing-parchment: #f1f1e6;
+  --landing-paper: #ffffff;
+  --landing-radius-sm: 4px;
+  --landing-radius-md: 8px;
+  --font-landing-display: var(--font-public-sans);
+  --font-landing-body: var(--font-public-sans);
+  --font-landing-label: var(--font-space-grotesk);
+}
 
 @theme inline {
   --color-background: var(--background);
