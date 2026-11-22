@@ -66,6 +66,7 @@ import (
 	app_public_himpunan "backend/app/public/himpunan"
 	app_public_invitations "backend/app/public/invitations"
 	app_public_merch "backend/app/public/merch"
+	app_public_officials "backend/app/public/officials"
 	app_public_press_releases "backend/app/public/press_releases"
 	app_public_press_releases_slug "backend/app/public/press_releases/_slug"
 	app_public_recruitment_slug "backend/app/public/recruitment/_slug"
@@ -201,6 +202,7 @@ func init() {
 	framework.RegisterRoute("GET", "/public/himpunan", app_public_himpunan.GET)
 	framework.RegisterRoute("POST", "/public/invitations", app_public_invitations.POST)
 	framework.RegisterRoute("GET", "/public/merch", app_public_merch.GET)
+	framework.RegisterRoute("GET", "/public/officials", app_public_officials.GET)
 	framework.RegisterRoute("GET", "/public/press_releases", app_public_press_releases.GET)
 	framework.RegisterRoute("GET", "/public/press_releases/:slug", app_public_press_releases_slug.GET)
 	framework.RegisterRoute("GET", "/public/recruitment/:slug", app_public_recruitment_slug.GET)

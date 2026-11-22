@@ -2,10 +2,19 @@
 
 import { useMemo, useState } from "react"
 import { HimpunanLogo } from "@/components/landing/himpunan-logo"
-import { getRegionCoordinator, groupByRegion, type Himpunan } from "@/lib/landing/content"
+import { groupByRegion, type Himpunan } from "@/lib/landing/content"
+
+type Coordinator = { name: string; origin: string }
 
 /** Daftar anggota per daerah + filter teks (nama / instansi / kota) di sisi klien. */
-export function MemberDirectory({ members }: { members: Himpunan[] }) {
+export function MemberDirectory({
+  members,
+  coordinators = {},
+}: {
+  members: Himpunan[]
+  /** Peta daerah → koordinator, dari GET /public/officials. */
+  coordinators?: Record<number, Coordinator>
+}) {
   const [query, setQuery] = useState("")
 
   const groups = useMemo(() => {
@@ -40,7 +49,7 @@ export function MemberDirectory({ members }: { members: Himpunan[] }) {
       {groups.length ? (
         <div className="mt-12 space-y-14">
           {groups.map((group) => {
-            const koor = group.region ? getRegionCoordinator(group.region) : undefined
+            const koor = group.region ? coordinators[group.region] : undefined
             return (
             <section key={group.region} aria-label={`Himpunan di ${group.label}`}>
               <h2 className="flex items-baseline justify-between gap-3 border-b border-[var(--landing-ink)]/15 pb-3 font-[family-name:var(--font-landing-display)] text-2xl font-extrabold text-[var(--landing-ink)] md:text-3xl">

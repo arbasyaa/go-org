@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { officialGroups } from "@/lib/landing/content"
+import type { OfficialGroup } from "@/lib/landing/content"
 import { SectionLabel, SectionTitle } from "@/components/landing/kinetic"
 import { cn } from "@/lib/utils"
 
@@ -11,17 +11,23 @@ import { cn } from "@/lib/utils"
  * berpindah), satu panel aktif. Kartu panel masuk ulang tiap ganti divisi
  * (key = divisi) dengan stagger CSS, dan kartu pimpinan (Koordinator/Kepala)
  * diberi bobot visual lebih besar.
+ *
+ * Data berasal dari tabel user (GET /public/officials). Tanpa pengurus, section
+ * tidak dirender sama sekali — lebih baik hilang daripada menampilkan orang
+ * yang sudah tidak menjabat.
  */
-export function OfficialsSection() {
+export function OfficialsSection({ groups: officialGroups }: { groups: OfficialGroup[] }) {
   const [index, setIndex] = useState(0)
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([])
-  const group = officialGroups[index]
+  // Data bisa berubah (admin menghapus divisi) — jaga indeks tetap valid.
+  const active = Math.min(index, officialGroups.length - 1)
+  const group = officialGroups[active]
 
   function onKey(e: React.KeyboardEvent) {
     const last = officialGroups.length - 1
-    let next = index
-    if (e.key === "ArrowRight") next = index === last ? 0 : index + 1
-    else if (e.key === "ArrowLeft") next = index === 0 ? last : index - 1
+    let next = active
+    if (e.key === "ArrowRight") next = active === last ? 0 : active + 1
+    else if (e.key === "ArrowLeft") next = active === 0 ? last : active - 1
     else if (e.key === "Home") next = 0
     else if (e.key === "End") next = last
     else return
@@ -29,6 +35,8 @@ export function OfficialsSection() {
     setIndex(next)
     tabsRef.current[next]?.focus()
   }
+
+  if (!group) return null
 
   return (
     <section
@@ -58,7 +66,7 @@ export function OfficialsSection() {
           data-lenis-prevent
         >
           {officialGroups.map((g, i) => {
-            const selected = i === index
+            const selected = i === active
             return (
               <button
                 key={g.division}
@@ -88,7 +96,7 @@ export function OfficialsSection() {
           })}
         </div>
 
-        <div id="pengurus-panel" role="tabpanel" aria-labelledby={`tab-${index}`} className="mt-10">
+        <div id="pengurus-panel" role="tabpanel" aria-labelledby={`tab-${active}`} className="mt-10">
           <ul key={group.division} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {group.members.map((official, i) => {
               const lead = i === 0 || /Koordinator Wilayah|Kepala/.test(official.role)
@@ -112,13 +120,25 @@ export function OfficialsSection() {
                   <span
                     aria-hidden
                     className={cn(
-                      "relative flex items-center justify-center rounded-full font-[family-name:var(--font-landing-display)] font-extrabold transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-rotate-6 group-hover:scale-110",
+                      "relative flex items-center justify-center overflow-hidden rounded-full font-[family-name:var(--font-landing-display)] font-extrabold transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-rotate-6 group-hover:scale-110",
                       lead
                         ? "size-16 bg-[var(--landing-on-ink)] text-lg text-[var(--landing-ink)]"
                         : "size-11 bg-[var(--landing-ink)] text-xs text-[var(--landing-on-ink)]"
                     )}
                   >
+                    {/* Inisial jadi lapisan dasar: file avatar yang sudah hilang dari
+                        storage tidak menyisakan broken image. */}
                     {initials(official.name)}
+                    {official.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={official.avatar}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 size-full object-cover"
+                      />
+                    ) : null}
                   </span>
                   <div className="relative mt-auto pt-6">
                     <p

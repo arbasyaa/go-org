@@ -281,108 +281,24 @@ export function groupByRegion(list: Himpunan[]): RegionGroup[] {
 export const memberIndex = buildMemberIndex(himpunanList)
 export const memberDirectory: MemberGroup[] = groupByCity(himpunanList)
 
-// Sumber: Data Diri FORMATUR BPW 26/27 (+ akun pengguna hasil impor) — jalur
-// PH, tiap divisi (Kadiv → Sekdiv → Anggota), lalu Koordinator Daerah.
-export const officialGroups = [
-  {
-    division: "Pengurus Harian",
-    members: [
-      { name: "Ghani Al-Fatah", role: "Koordinator Wilayah", origin: "HIMTI UNSIQ" },
-      { name: "Mukhammad Khisanul Labib", role: "Wakil Koordinator Wilayah", origin: "HIMATIKA ITSNU Pekalongan" },
-      { name: "Arbasya Anandito", role: "Sekretaris Wilayah 1", origin: "HIMATRIS PNC" },
-      { name: "Dapa", role: "Sekretaris Wilayah 2", origin: "HMPTI Telkom University Purwokerto" },
-      { name: "Ica Danisa", role: "Bendahara Wilayah 1", origin: "HIMTI UNSIQ" },
-      { name: "Jamilun Nadif", role: "Bendahara Wilayah 2", origin: "HIMATEKNO UMPWR" },
-    ],
-  },
-  {
-    division: "PSDM",
-    members: [
-      { name: "Seikha Najla", role: "Kepala Divisi", origin: "HIMATEKNO UMPWR" },
-      { name: "Rahmad Aris Setiawan", role: "Sekretaris Divisi", origin: "HMJ-I STT Ronggolawe" },
-      { name: "Faizal Abdila", role: "Anggota Divisi", origin: "HIMATIF UMNU" },
-      { name: "Solahudin Al-Ayubi", role: "Anggota Divisi", origin: "HMPSIF UNISNU" },
-      { name: "Apri Milandari Awiyama", role: "Anggota Divisi", origin: "HIMA TEKOM UHN" },
-      { name: "Indra Hermawan", role: "Anggota Divisi", origin: "HMIF UPS" },
-      { name: "M. Mundzir Adil Ardana", role: "Anggota Divisi", origin: "HIMATIF UMNU" },
-      { name: "Marta Safitri", role: "Anggota Divisi", origin: "HMSE Telkom University Purwokerto" },
-      { name: "Bima Andiansyah", role: "Anggota Divisi", origin: "UIN Walisongo Semarang" },
-      { name: "Fitriadita Hilal Majid", role: "Anggota Divisi", origin: "HIMFORMA UPGRIS" },
-      { name: "M. Rikza Alifika", role: "Anggota Divisi", origin: "UIN Walisongo Semarang" },
-    ],
-  },
-  {
-    division: "Medkominfo",
-    members: [
-      { name: "M. Qistil Mizan", role: "Kepala Divisi", origin: "HIMATIKA ITSNU Pekalongan" },
-      { name: "Anindya Yuna Chamda", role: "Sekretaris Divisi", origin: "HIMATIKA ITSNU Pekalongan" },
-      { name: "Abdhe Rachmanzah", role: "Anggota Divisi", origin: "HMTIKA STIMIK Tunas Bangsa Banjarnegara" },
-      { name: "Muchamad Danang Prastyo", role: "Anggota Divisi", origin: "HIMANIFO UNIMMA" },
-      { name: "Dhafin Rifki Bayu Santoso", role: "Anggota Divisi", origin: "HMP MIKROPTIK UNS" },
-      { name: "Muhammad Fakih", role: "Anggota Divisi", origin: "HIMATIF UMPKU" },
-      { name: "Didi Purnomo", role: "Anggota Divisi", origin: "HMPS Informatika UIN Gusdur" },
-    ],
-  },
-  {
-    division: "IPTEK",
-    members: [
-      { name: "Bayu Prasetyo", role: "Kepala Divisi", origin: "HIMATIV UHN" },
-      { name: "Muhammad Alvin Hidayat", role: "Sekretaris Divisi", origin: "GENETIKA POLSA" },
-      { name: "Roya Firman Gani", role: "Anggota Divisi", origin: "GENETIKA POLSA" },
-      { name: "Nanda Bagus Priambodo", role: "Anggota Divisi", origin: "HMPTI Telkom University Purwokerto" },
-      { name: "Afif Abdurrohman Assidiq", role: "Anggota Divisi", origin: "HIMAFOR UNIMUS" },
-      { name: "Lilis Nuraeni", role: "Anggota Divisi", origin: "HIMA TI UNW" },
-      { name: "Farel Adi Nugraha Prastya", role: "Anggota Divisi", origin: "HM-TIF UNISSULA" },
-      { name: "Radita Putri Nuraini", role: "Anggota Divisi", origin: "HMSE Telkom University Purwokerto" },
-    ],
-  },
-  {
-    division: "KWU",
-    members: [
-      { name: "Alhambra Fernando", role: "Kepala Divisi", origin: "HIMATEKNO UMPWR" },
-      { name: "Quratu Ayun Defaren", role: "Sekretaris Divisi", origin: "HMSE Telkom University Purwokerto" },
-      { name: "Aprilia Sahara", role: "Anggota Divisi", origin: "HIMATIKA ITSNU Pekalongan" },
-      { name: "Damanik, Yohanes Geovan Ondova", role: "Anggota Divisi", origin: "HMPTI Telkom University Purwokerto" },
-      { name: "Rachmat Hermansyah", role: "Anggota Divisi", origin: "HIMAFORTIC UNUGHA" },
-      { name: "Muchamad Fatchur Rachman", role: "Anggota Divisi", origin: "HIMATIF UMPKU" },
-      { name: "Herlina Zahra Nurhalisa", role: "Anggota Divisi", origin: "HMJTI Unwahas" },
-      { name: "Luriyanti Novika Purnama Sari", role: "Anggota Divisi", origin: "HIMFORMA UPGRIS" },
-      { name: "Refian Nazar Malik", role: "Anggota Divisi", origin: "HMTIKA STIMIK Tunas Bangsa Banjarnegara" },
-    ],
-  },
-  {
-    division: "PR",
-    members: [
-      { name: "Afifatul Khusna", role: "Kepala Divisi", origin: "HM-TIF UNISSULA" },
-      { name: "Khadijah Nur Fatonah", role: "Sekretaris Divisi", origin: "HIMA TI UNW" },
-      { name: "M. Risqi Agung Pratama", role: "Anggota Divisi", origin: "HMPS Informatika UIN Gusdur" },
-      { name: "Bisma Wahyu Eka Pratama", role: "Anggota Divisi", origin: "HMJ-I STT Ronggolawe" },
-      { name: "Ahmad Dani Ajibal", role: "Anggota Divisi", origin: "HIMTI UNSIQ" },
-      { name: "Haydar Azka", role: "Anggota Divisi", origin: "HIMATIF UMNU" },
-      { name: "Durrotul Hidayatul Muna", role: "Anggota Divisi", origin: "HMJTI Unwahas" },
-      { name: "Nuril Anwar", role: "Anggota Divisi", origin: "HIMAFOR UNIMUS" },
-      { name: "Sintia Nur Mala Dewi", role: "Anggota Divisi", origin: "HMPSIF UNISNU" },
-      { name: "M. Dzaky Harpy Pratama", role: "Anggota Divisi", origin: "UIN Walisongo Semarang" },
-    ],
-  },
-  {
-    division: "Koordinator Daerah",
-    members: [
-      { name: "Achmad Fikr Mujahid", role: "Koordinator Daerah 1", origin: "HIMATIV UHN" },
-      { name: "Cikal Chrestella Cora", role: "Koordinator Daerah 2", origin: "HMSE Telkom University Purwokerto" },
-      { name: "Nabilla Ananta", role: "Koordinator Daerah 3", origin: "HIMFORMA UPGRIS" },
-      { name: "Riska Damayanti", role: "Koordinator Daerah 4", origin: "HMTIKA STIMIK Tunas Bangsa Banjarnegara" },
-      { name: "Arsya Fitrotul Firdaus", role: "Koordinator Daerah 5", origin: "HIMA Pro TI Universitas Muria Kudus" },
-      { name: "Galang Nur Seto", role: "Koordinator Daerah 6", origin: "HMP MIKROPTIK UNS" },
-    ],
-  },
-] as const
+/** Kelompok pengurus per divisi; bentuk yang dipakai komponen landing. */
+export type OfficialGroup = {
+  division: string
+  members: { name: string; role: string; origin: string; avatar?: string }[]
+}
 
-/** Koordinator Daerah N dari `officialGroups`; undefined bila tidak ada. */
-export function getRegionCoordinator(region: number): { name: string; origin: string } | undefined {
-  const group = officialGroups.find((g) => g.division === "Koordinator Daerah")
-  const m = group?.members.find((x) => x.role === `Koordinator Daerah ${region}`)
-  return m ? { name: m.name, origin: m.origin } : undefined
+/** Peta "Koordinator Daerah N" → orangnya, dari data pengurus yang aktif. */
+export function buildRegionCoordinators(
+  officials: OfficialGroup[]
+): Record<number, { name: string; origin: string }> {
+  const out: Record<number, { name: string; origin: string }> = {}
+  for (const group of officials) {
+    for (const m of group.members) {
+      const match = /^Koordinator Daerah (\d+)$/.exec(m.role)
+      if (match) out[Number(match[1])] = { name: m.name, origin: m.origin }
+    }
+  }
+  return out
 }
 
 export const recruitmentCta = {
@@ -452,14 +368,15 @@ export const cityNodes = [
 ] as const
 
 /** Angka ringkas, dihitung dari data di atas — tidak ada angka karangan. */
-export function buildStats(directory: MemberGroup[]) {
-  const officials: { origin: string }[] = officialGroups.flatMap((g) => [...g.members])
-  const origins = new Set(officials.map((o) => o.origin))
+export function buildStats(directory: MemberGroup[], officials: OfficialGroup[]) {
+  const origins = new Set(officials.flatMap((g) => g.members.map((m) => m.origin)).filter(Boolean))
   const memberHimpunan = directory.reduce((n, g) => n + g.members.length, 0)
+  const total = officials.reduce((n, g) => n + g.members.length, 0)
+  const divisions = officials.filter((g) => g.division !== "Koordinator Daerah").length
   return [
-    { value: officials.length, label: "Pengurus wilayah", note: "periode 2026/2027" },
+    { value: total, label: "Pengurus wilayah", note: "periode 2026/2027" },
     { value: origins.size, label: "Himpunan terwakili", note: "di Badan Pengurus Wilayah" },
-    { value: officialGroups.length - 1, label: "Divisi kerja", note: "plus koordinator daerah" },
+    { value: divisions, label: "Divisi kerja", note: "plus koordinator daerah" },
     { value: memberHimpunan, label: "Himpunan anggota", note: `di ${directory.length} kota` },
   ]
 }

@@ -3,11 +3,13 @@ import {
   programs,
   type Himpunan,
   type LandingSectionKey,
+  type OfficialGroup,
   type WorkProgram,
 } from "@/lib/landing/content"
 import type {
   HimpunanItem,
   MerchItem,
+  OfficialItem,
   PressRelease,
   WorkProgramItem,
 } from "@/lib/public-content"
@@ -81,6 +83,35 @@ export async function getHimpunan(): Promise<Himpunan[]> {
     email: h.email || null,
     logo: h.logo_url ? storageUrl(h.logo_url) : null,
   }))
+}
+
+/**
+ * Pengurus dari API, dikelompokkan per divisi. Sumbernya tabel `user`, jadi
+ * pengurus yang akunnya dinonaktifkan/dihapus langsung hilang dari landing.
+ * Tidak ada fallback statis: fetch gagal = daftar kosong (section
+ * menyembunyikan diri), supaya tidak pernah menampilkan orang yang sudah tidak
+ * menjabat.
+ */
+export async function getOfficials(): Promise<OfficialGroup[]> {
+  const rows = await publicGet<OfficialItem[]>("/public/officials", [])
+  return groupOfficials(rows)
+}
+
+function groupOfficials(rows: OfficialItem[]): OfficialGroup[] {
+  const groups = new Map<string, OfficialGroup>()
+  for (const row of rows) {
+    const division = row.division || "Pengurus"
+    const group = groups.get(division) ?? { division, members: [] }
+    group.members.push({
+      name: row.name,
+      role: row.role,
+      origin: row.origin,
+      // Path storage di-resolve di sini supaya komponen tidak perlu tahu API base.
+      avatar: row.avatar_url ? storageUrl(row.avatar_url) : undefined,
+    })
+    groups.set(division, group)
+  }
+  return [...groups.values()]
 }
 
 export type WorkProgramQuery = {

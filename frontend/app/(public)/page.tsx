@@ -11,6 +11,7 @@ import {
   getHimpunan,
   getLandingSections,
   getMerch,
+  getOfficials,
   getPressReleases,
   getWorkPrograms,
 } from "@/lib/landing/fetch"
@@ -41,23 +42,24 @@ export const revalidate = 60
 const PROGRAM_LIMIT = 5
 
 export default async function LandingPage() {
-  const [press, merch, himpunan, programs, sections] = await Promise.all([
+  const [press, merch, himpunan, programs, sections, officials] = await Promise.all([
     getPressReleases(5),
     getMerch(),
     getHimpunan(),
     getWorkPrograms({ limit: PROGRAM_LIMIT }),
     getLandingSections(),
+    getOfficials(),
   ])
   const directory = groupByCity(himpunan)
 
   return (
     <>
-      <HeroSection memberIndex={buildMemberIndex(himpunan)} stats={buildStats(directory)} />
+      <HeroSection memberIndex={buildMemberIndex(himpunan)} stats={buildStats(directory, officials)} />
       {sections.about ? <AboutSection /> : null}
       {sections.programs ? <ProgramsSection programs={programs.items} total={programs.total} limit={PROGRAM_LIMIT} /> : null}
       {sections.press ? <PressSection items={press} /> : null}
       {sections.members ? <MembersSection directory={directory} /> : null}
-      {sections.officials ? <OfficialsSection /> : null}
+      {sections.officials ? <OfficialsSection groups={officials} /> : null}
       {sections.merch ? <MerchSection items={merch} /> : null}
       {sections.invitation ? <InvitationSection /> : null}
       {sections.cta ? <CtaSection /> : null}
