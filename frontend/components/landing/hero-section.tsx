@@ -14,12 +14,9 @@ import { NetworkCanvas } from "@/components/landing/network-canvas"
 export function HeroSection({
   memberIndex,
   stats,
-  showPrograms = true,
 }: {
   memberIndex: MemberIndexItem[]
   stats: { value: number; label: string }[]
-  /** false bila section Program disembunyikan → CTA utama ke /anggota. */
-  showPrograms?: boolean
 }) {
   return (
     <section
@@ -72,8 +69,8 @@ export function HeroSection({
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <span data-hero-cta>
-              <MagneticLink href={showPrograms ? hero.primaryCta.href : "/anggota"} variant="accent" cursor="Jelajah">
-                {showPrograms ? hero.primaryCta.label : "Lihat daftar anggota"}
+              <MagneticLink href={hero.primaryCta.href} variant="accent" cursor="Jelajah">
+                {hero.primaryCta.label}
               </MagneticLink>
             </span>
             <span data-hero-cta>

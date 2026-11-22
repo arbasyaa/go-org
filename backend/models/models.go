@@ -481,4 +481,15 @@ type WorkProgram struct {
 	Cadence     string `orm:"size:50" json:"cadence"`
 	IsActive    bool   `orm:"default:true" json:"is_active"`
 	SortOrder   int    `orm:"default:0" json:"sort_order"`
+	Slug        string `orm:"required,size:180" json:"slug"`
+	// Category: program_kerja | agenda. Status: upcoming | done.
+	Category   string `orm:"size:30;default:program_kerja" json:"category"`
+	Status     string `orm:"size:20;default:upcoming" json:"status"`
+	DivisionID *int64 `orm:"null;index" json:"division_id"`
+	// Tanggal pelaksanaan (kolom DATE). Respons API memakai services.WorkProgramView
+	// yang memformat "YYYY-MM-DD".
+	StartDate *time.Time `orm:"null" json:"start_date"`
+	EndDate   *time.Time `orm:"null" json:"end_date"`
+	Location  string     `orm:"size:200" json:"location"`
+	Host      string     `orm:"size:200" json:"host"`
 }

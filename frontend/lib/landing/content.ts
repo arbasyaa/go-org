@@ -26,10 +26,10 @@ export type LandingSectionKey =
 
 export type NavLink = { label: string; href: string; section?: LandingSectionKey }
 
-/** `section`: tautan ikut disembunyikan bila toggle section-nya dimatikan. Berita = halaman sendiri (/berita), selalu tampil. */
+/** `section`: tautan ikut disembunyikan bila toggle section-nya dimatikan. Berita dan Program = halaman sendiri (/berita, /program), selalu tampil. */
 export const navLinks: readonly NavLink[] = [
   { label: "Tentang", href: "/#tentang", section: "about" },
-  { label: "Program", href: "/#program", section: "programs" },
+  { label: "Program", href: "/program" },
   { label: "Berita", href: "/berita" },
   { label: "Jaringan", href: "/#himpunan", section: "members" },
   { label: "Anggota", href: "/anggota", section: "members" },
@@ -43,7 +43,7 @@ export const hero = {
   title: "Maju Bersama Teknologi",
   subtitle:
     "Wilayah VII PERMIKOMNAS mewadahi himpunan mahasiswa informatika dan komputer lintas kampus di Jawa Tengah. Berjejaring, berkiprah, dan bertumbuh bersama dalam satu perhimpunan.",
-  primaryCta: { label: "Lihat program kerja", href: "/#program" },
+  primaryCta: { label: "Lihat program kerja", href: "/program" },
   secondaryCta: { label: "Kenali pengurus", href: "/#pengurus" },
 } as const
 
@@ -73,34 +73,68 @@ export const aboutParagraphs = [
   "Kami percaya kemajuan teknologi tidak berhenti di satu kampus. Dengan menghimpun himpunan dari berbagai kota di Jawa Tengah, kami membangun jaringan yang berbagi ilmu, sumber daya, dan panggung bagi mahasiswa.",
 ] as const
 
-export type WorkProgram = { name: string; description: string; cadence: string }
+export type WorkProgram = {
+  slug: string
+  name: string
+  description: string
+  cadence: string
+  category: "program_kerja" | "agenda"
+  status: "upcoming" | "done"
+  division_name: string
+  /** "YYYY-MM-DD" atau null. */
+  start_date: string | null
+  end_date: string | null
+  location: string
+  host: string
+}
 
+const programBase = {
+  category: "program_kerja",
+  status: "upcoming",
+  division_name: "",
+  start_date: null,
+  end_date: null,
+  location: "",
+  host: "",
+} as const
+
+/** Fallback statis bila API program kerja tidak terjangkau. */
 export const programs: WorkProgram[] = [
   {
+    ...programBase,
+    slug: "kongres-wilayah",
     name: "Kongres Wilayah",
     description:
       "Musyawarah tertinggi antar-himpunan: evaluasi periode, arah gerakan, dan pemilihan Badan Pengurus Wilayah.",
     cadence: "Tahunan",
   },
   {
+    ...programBase,
+    slug: "seminar-dan-kajian-teknologi",
     name: "Seminar dan Kajian Teknologi",
     description:
       "Pembicara dari industri dan akademisi membahas tren teknologi terkini untuk mahasiswa seluruh Jawa Tengah.",
     cadence: "Semesteran",
   },
   {
+    ...programBase,
+    slug: "kompetisi-antar-kampus",
     name: "Kompetisi Antar-Kampus",
     description:
       "Panggung lomba pemrograman, keamanan, dan inovasi digital yang mempertemukan talenta dari tiap himpunan anggota.",
     cadence: "Tahunan",
   },
   {
+    ...programBase,
+    slug: "pelatihan-dan-sertifikasi",
     name: "Pelatihan dan Sertifikasi",
     description:
       "Kelas intensif dan program sertifikasi bersama mitra untuk memperkuat kesiapan kerja anggota.",
     cadence: "Berkelanjutan",
   },
   {
+    ...programBase,
+    slug: "kolaborasi-riset",
     name: "Kolaborasi Riset",
     description:
       "Wadah kolaborasi riset dan pengabdian antar-himpunan lintas kampus dalam satu wilayah.",

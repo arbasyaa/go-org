@@ -1,6 +1,11 @@
 package services
 
-import "testing"
+import (
+	"testing"
+	"time"
+
+	"backend/models"
+)
 
 func sp(s string) *string { return &s }
 
@@ -71,6 +76,53 @@ func TestValidateLandingSections(t *testing.T) {
 	for _, s := range bad {
 		if _, err := ValidateLandingSections(s); err == nil {
 			t.Errorf("%q should be invalid", s)
+		}
+	}
+}
+
+func TestWorkProgramValidateDetail(t *testing.T) {
+	bad := []WorkProgramInput{
+		{Category: sp("lain")},
+		{Status: sp("x")},
+		{StartDate: sp("2026-13-01")},
+		{DivisionID: sp("abc")},
+		{StartDate: sp("2026-05-10"), EndDate: sp("2026-05-09")},
+	}
+	for i, in := range bad {
+		if err := in.Validate(false); err == nil {
+			t.Errorf("kasus %d harus gagal", i)
+		}
+	}
+	ok := WorkProgramInput{Category: sp("agenda"), Status: sp("done"), DivisionID: sp(""),
+		StartDate: sp("2026-05-10"), EndDate: sp("2026-05-10")}
+	if err := ok.Validate(false); err != nil {
+		t.Error(err)
+	}
+	if Slugify("Kongres Nasional ke-2!", 170) != "kongres-nasional-ke-2" {
+		t.Error("slugify")
+	}
+}
+
+func TestSortWorkPrograms(t *testing.T) {
+	d := func(s string) *time.Time { x, _ := time.Parse("2006-01-02", s); return &x }
+	mk := func(id int64, st string, date *time.Time) *models.WorkProgram {
+		p := &models.WorkProgram{Status: st, StartDate: date}
+		p.ID = id
+		return p
+	}
+	l := []*models.WorkProgram{
+		mk(1, "done", d("2026-01-01")), mk(2, "upcoming", nil), mk(3, "upcoming", d("2026-09-01")),
+		mk(4, "upcoming", d("2026-08-01")), mk(5, "done", d("2026-03-01")),
+	}
+	SortWorkPrograms(l)
+	var got []int64
+	for _, p := range l {
+		got = append(got, p.ID)
+	}
+	want := []int64{4, 3, 2, 5, 1}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got %v want %v", got, want)
 		}
 	}
 }

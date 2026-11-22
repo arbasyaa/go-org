@@ -71,6 +71,7 @@ import (
 	app_public_recruitment_slug "backend/app/public/recruitment/_slug"
 	app_public_recruitment_slug_submit "backend/app/public/recruitment/_slug/submit"
 	app_public_work_programs "backend/app/public/work_programs"
+	app_public_work_programs_slug "backend/app/public/work_programs/_slug"
 	app_push_subscribe "backend/app/push/subscribe"
 	app_recruitments "backend/app/recruitments"
 	app_recruitments_id "backend/app/recruitments/_id"
@@ -205,6 +206,7 @@ func init() {
 	framework.RegisterRoute("GET", "/public/recruitment/:slug", app_public_recruitment_slug.GET)
 	framework.RegisterRoute("POST", "/public/recruitment/:slug/submit", app_public_recruitment_slug_submit.POST)
 	framework.RegisterRoute("GET", "/public/work_programs", app_public_work_programs.GET)
+	framework.RegisterRoute("GET", "/public/work_programs/:slug", app_public_work_programs_slug.GET)
 	framework.RegisterRoute("GET", "/push/subscribe", app_push_subscribe.GET)
 	framework.RegisterRoute("POST", "/push/subscribe", app_push_subscribe.POST)
 	framework.RegisterRoute("DELETE", "/push/subscribe", app_push_subscribe.DELETE)

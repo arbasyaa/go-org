@@ -1,7 +1,8 @@
+import Link from "next/link"
 import type { WorkProgram } from "@/lib/landing/content"
+import { formatProgramDate, terbilang } from "@/lib/landing/program"
 import { SectionLabel, SectionTitle } from "@/components/landing/kinetic"
-
-const NUMBER_WORDS = ["Nol", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh"]
+import { ProgramBadges } from "@/components/landing/program-badges"
 
 const tones = [
   "from-[var(--landing-accent)]/35",
@@ -17,7 +18,18 @@ const tones = [
  * sebagai satu perjalanan. Di bawah 1024px kembali ke tumpukan vertikal biasa
  * (tidak ada scroll horizontal tersembunyi di ponsel).
  */
-export function ProgramsSection({ programs }: { programs: readonly WorkProgram[] }) {
+export function ProgramsSection({
+  programs,
+  total,
+  limit = 5,
+}: {
+  programs: readonly WorkProgram[]
+  /** Total program aktif (bukan jumlah kartu yang tampil). */
+  total: number
+  limit?: number
+}) {
+  const shown = programs.slice(0, limit)
+  const count = Math.max(total, shown.length)
   // Wrapper <div> milik React: ScrollTrigger `pin` membungkus <section> dengan
   // div.pin-spacer. Tanpa wrapper, saat navigasi ke route lain React mencoba
   // removeChild(<section>) dari <main> padahal parent-nya sudah pin-spacer
@@ -37,7 +49,7 @@ export function ProgramsSection({ programs }: { programs: readonly WorkProgram[]
       >
         <div className="flex shrink-0 flex-col justify-center lg:w-[38vw] lg:pr-10">
           <SectionLabel index="02">Program kerja</SectionLabel>
-          <SectionTitle id="program-title" text={programs.length === 1 ? "Satu agenda, satu wilayah." : `${NUMBER_WORDS[programs.length] ?? programs.length} agenda, satu wilayah.`} className="mt-6 max-w-[11ch]" accentLast />
+          <SectionTitle id="program-title" text={`${terbilang(count)} agenda, satu wilayah.`} className="mt-6 max-w-[11ch]" accentLast />
           <p data-reveal className="mt-8 max-w-[40ch] font-[family-name:var(--font-landing-body)] text-base leading-relaxed text-[var(--landing-on-ink-dim)] md:text-lg">
             Agenda rutin yang menautkan seluruh himpunan anggota dalam satu kalender kegiatan wilayah.
           </p>
@@ -48,7 +60,9 @@ export function ProgramsSection({ programs }: { programs: readonly WorkProgram[]
         </div>
 
         <ol className="contents">
-          {programs.map((program, i) => (
+          {shown.map((program, i) => {
+            const date = formatProgramDate(program.start_date, program.end_date)
+            return (
             <li
               key={program.name}
               data-hscroll-card
@@ -60,6 +74,11 @@ export function ProgramsSection({ programs }: { programs: readonly WorkProgram[]
                 aria-hidden
                 className={`absolute inset-0 -z-0 bg-gradient-to-br ${tones[i % tones.length]} to-transparent opacity-60 transition-opacity duration-700 group-hover:opacity-100`}
               />
+              <Link
+                href={`/program/${program.slug}`}
+                aria-label={`Lihat detail: ${program.name}`}
+                className="absolute inset-0 z-20 rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--landing-cyan)]"
+              />
               <Orbit index={i} />
               <div className="relative flex items-start justify-between gap-4">
                 <span className="font-[family-name:var(--font-landing-display)] text-6xl font-extrabold leading-none tabular-nums text-[var(--landing-on-ink)]/90 md:text-7xl">
@@ -70,15 +89,54 @@ export function ProgramsSection({ programs }: { programs: readonly WorkProgram[]
                 </span>
               </div>
               <div className="relative mt-auto pt-16">
+                <ProgramBadges category={program.category} status={program.status} className="mb-4" />
                 <h3 className="font-[family-name:var(--font-landing-display)] text-2xl font-bold leading-tight md:text-3xl">
                   {program.name}
                 </h3>
-                <p className="mt-3 max-w-[40ch] font-[family-name:var(--font-landing-body)] text-sm leading-relaxed text-[var(--landing-on-ink-dim)] md:text-base">
+                <p className="mt-3 line-clamp-3 max-w-[40ch] font-[family-name:var(--font-landing-body)] text-sm leading-relaxed text-[var(--landing-on-ink-dim)] md:text-base">
                   {program.description}
                 </p>
+                {date || program.division_name ? (
+                  <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-[family-name:var(--font-landing-label)] text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-[var(--landing-on-ink)]/80">
+                    {date ? <span>{date}</span> : null}
+                    {date && program.division_name ? <span aria-hidden className="text-[var(--landing-accent)]">/</span> : null}
+                    {program.division_name ? <span>{program.division_name}</span> : null}
+                  </p>
+                ) : null}
               </div>
             </li>
-          ))}
+            )
+          })}
+          {shown.length === 0 ? (
+            <li
+              data-hscroll-card
+              className="flex min-h-[12rem] shrink-0 flex-col justify-center rounded-[var(--landing-radius-md)] border border-dashed border-[var(--landing-on-ink)]/25 p-8 lg:h-[40svh] lg:w-[min(26rem,30vw)]"
+            >
+              <p className="font-[family-name:var(--font-landing-display)] text-2xl font-bold">Belum ada program.</p>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--landing-on-ink-dim)]">
+                Program kerja dan agenda wilayah akan tampil di sini.
+              </p>
+            </li>
+          ) : null}
+          {count > 0 ? (
+            <li
+              data-hscroll-card
+              data-cursor="Semua"
+              className="group relative flex min-h-[12rem] shrink-0 flex-col justify-center overflow-hidden rounded-[var(--landing-radius-md)] border border-[var(--landing-on-ink)]/25 p-8 transition-colors duration-500 hover:border-[var(--landing-on-ink)]/60 lg:h-[40svh] lg:w-[min(22rem,26vw)]"
+            >
+              <p className="font-[family-name:var(--font-landing-label)] text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--landing-on-ink-dim)]">
+                {count > shown.length ? `+${count - shown.length} lainnya` : "Kalender lengkap"}
+              </p>
+              <p className="mt-4 font-[family-name:var(--font-landing-display)] text-3xl font-extrabold leading-tight">
+                Lihat semua program <span aria-hidden className="inline-block transition-transform duration-500 group-hover:translate-x-2">→</span>
+              </p>
+              <Link
+                href="/program"
+                aria-label="Lihat semua program"
+                className="absolute inset-0 z-20 rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--landing-cyan)]"
+              />
+            </li>
+          ) : null}
         </ol>
       </div>
     </section>

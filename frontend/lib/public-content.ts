@@ -7,7 +7,8 @@
  *     GET /public/press_releases?limit=N   -> PressRelease[] (hanya published, terbaru dulu)
  *     GET /public/press_releases/:slug     -> PressRelease (404 bila draft / tidak ada)
  *     GET /public/himpunan                 -> HimpunanItem[] (is_active, urut sort_order)
- *     GET /public/work_programs            -> WorkProgramItem[] (is_active, urut sort_order)
+ *     GET /public/work_programs            -> WorkProgramItem[] (is_active; ?limit=&status=&category=; header X-Total-Count)
+ *     GET /public/work_programs/:slug      -> WorkProgramItem (404 bila nonaktif / tidak ada)
  *     GET /public/merch                    -> MerchItem[] (hanya is_active, urut sort_order)
  *   Admin (login + permission)
  *     GET/POST       /press_releases       (press_release.manage)
@@ -72,11 +73,25 @@ export interface HimpunanItem {
   updated_at?: string
 }
 
+export type WorkProgramCategory = "program_kerja" | "agenda"
+export type WorkProgramStatus = "upcoming" | "done"
+
 export interface WorkProgramItem {
   id: number
   name: string
+  slug: string
   description: string
   cadence: string
+  category: WorkProgramCategory
+  status: WorkProgramStatus
+  division_id?: number | null
+  division_name?: string | null
+  /** Tanggal pelaksanaan "YYYY-MM-DD" atau null. */
+  start_date?: string | null
+  end_date?: string | null
+  location?: string
+  /** Tuan rumah (teks bebas). */
+  host?: string
   is_active: boolean
   sort_order: number
   created_at?: string

@@ -37,21 +37,24 @@ const organizationJsonLd = {
 // Berita & merch dikelola lewat CRUD: render ulang paling lambat tiap 60 detik.
 export const revalidate = 60
 
+/** Maksimum kartu program di landing; selebihnya lewat /program. */
+const PROGRAM_LIMIT = 5
+
 export default async function LandingPage() {
   const [press, merch, himpunan, programs, sections] = await Promise.all([
     getPressReleases(5),
     getMerch(),
     getHimpunan(),
-    getWorkPrograms(),
+    getWorkPrograms({ limit: PROGRAM_LIMIT }),
     getLandingSections(),
   ])
   const directory = groupByCity(himpunan)
 
   return (
     <>
-      <HeroSection memberIndex={buildMemberIndex(himpunan)} stats={buildStats(directory)} showPrograms={sections.programs} />
+      <HeroSection memberIndex={buildMemberIndex(himpunan)} stats={buildStats(directory)} />
       {sections.about ? <AboutSection /> : null}
-      {sections.programs ? <ProgramsSection programs={programs} /> : null}
+      {sections.programs ? <ProgramsSection programs={programs.items} total={programs.total} limit={PROGRAM_LIMIT} /> : null}
       {sections.press ? <PressSection items={press} /> : null}
       {sections.members ? <MembersSection directory={directory} /> : null}
       {sections.officials ? <OfficialsSection /> : null}

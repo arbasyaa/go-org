@@ -83,15 +83,76 @@ export async function getHimpunan(): Promise<Himpunan[]> {
   }))
 }
 
-/** Program kerja dari API; fallback statis hanya bila fetch gagal. */
-export async function getWorkPrograms(): Promise<WorkProgram[]> {
-  const rows = await publicGetOrNull<WorkProgramItem[]>("/public/work_programs")
-  if (!rows) return programs
-  return rows.map((p) => ({
+export type WorkProgramQuery = {
+  limit?: number
+  status?: "upcoming" | "done"
+  category?: "program_kerja" | "agenda"
+}
+
+/** Normalisasi baris API (toleran terhadap backend lama yang belum punya field baru). */
+function toWorkProgram(p: WorkProgramItem): WorkProgram {
+  return {
+    slug: p.slug || slugify(p.name),
     name: p.name,
     description: p.description ?? "",
     cadence: p.cadence ?? "",
-  }))
+    category: p.category === "agenda" ? "agenda" : "program_kerja",
+    status: p.status === "done" ? "done" : "upcoming",
+    division_name: p.division_name ?? "",
+    start_date: p.start_date || null,
+    end_date: p.end_date || null,
+    location: p.location ?? "",
+    host: p.host ?? "",
+  }
+}
+
+function slugify(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+/**
+ * Program kerja & agenda dari API beserta TOTAL aktif (header X-Total-Count,
+ * mengabaikan `limit`; fallback ke jumlah item). Fallback statis hanya bila
+ * fetch GAGAL; sukses dengan [] berarti memang kosong.
+ */
+export async function getWorkPrograms(
+  query: WorkProgramQuery = {}
+): Promise<{ items: WorkProgram[]; total: number }> {
+  const params = new URLSearchParams()
+  if (query.limit) params.set("limit", String(query.limit))
+  if (query.status) params.set("status", query.status)
+  if (query.category) params.set("category", query.category)
+  const qs = params.toString()
+  try {
+    const res = await fetch(`${BASE}/public/work_programs${qs ? `?${qs}` : ""}`, {
+      next: { revalidate: 60 },
+    })
+    if (!res.ok) throw new Error(String(res.status))
+    const body = (await res.json()) as { data?: WorkProgramItem[] }
+    const items = (body.data ?? []).map(toWorkProgram)
+    const raw = res.headers.get("X-Total-Count")
+    const header = raw === null ? Number.NaN : Number(raw)
+    const total = Number.isFinite(header) ? Math.max(header, items.length) : items.length
+    return { items, total }
+  } catch {
+    const all = programs.filter(
+      (p) =>
+        (!query.status || p.status === query.status) &&
+        (!query.category || p.category === query.category)
+    )
+    return { items: query.limit ? all.slice(0, query.limit) : all, total: all.length }
+  }
+}
+
+/** Detail program per slug; null bila 404 / gagal. */
+export async function getWorkProgram(slug: string): Promise<WorkProgram | null> {
+  const row = await publicGetOrNull<WorkProgramItem>(
+    `/public/work_programs/${encodeURIComponent(slug)}`
+  )
+  return row ? toWorkProgram(row) : null
 }
 
 export type LandingSections = Record<LandingSectionKey, boolean>

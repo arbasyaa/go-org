@@ -13,22 +13,52 @@ import {
 } from "@/components/advanced-table"
 import { ErrorState } from "@/components/page-states"
 import { useAuth } from "@/components/providers/auth-provider"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import { unwrapList } from "@/lib/format"
+import { formatProgramDate, categoryLabel, statusLabel } from "@/lib/landing/program"
 import type { WorkProgramItem } from "@/lib/public-content"
+import type { Division } from "@/lib/types"
 
 const CADENCE_SUGGESTIONS = ["Tahunan", "Semesteran", "Berkelanjutan", "Per periode"]
+
+const CATEGORY_ITEMS = [
+  { value: "program_kerja", label: "Program Kerja" },
+  { value: "agenda", label: "Agenda" },
+]
+
+const STATUS_ITEMS = [
+  { value: "upcoming", label: "Akan datang" },
+  { value: "done", label: "Selesai" },
+]
+
+/** Nilai Select untuk "tanpa divisi" (Select tidak menerima string kosong sebagai pilihan). */
+const NO_DIVISION = "none"
 
 type FormState = {
   name: string
   description: string
   cadence: string
+  category: string
+  status: string
+  division_id: string
+  start_date: string
+  end_date: string
+  location: string
+  host: string
   sort_order: string
   is_active: boolean
 }
@@ -37,6 +67,13 @@ const emptyForm: FormState = {
   name: "",
   description: "",
   cadence: "",
+  category: "program_kerja",
+  status: "upcoming",
+  division_id: NO_DIVISION,
+  start_date: "",
+  end_date: "",
+  location: "",
+  host: "",
   sort_order: "0",
   is_active: true,
 }
@@ -46,6 +83,13 @@ function toForm(row: WorkProgramItem, is_active = row.is_active): FormState {
     name: row.name,
     description: row.description ?? "",
     cadence: row.cadence ?? "",
+    category: row.category || "program_kerja",
+    status: row.status || "upcoming",
+    division_id: row.division_id ? String(row.division_id) : NO_DIVISION,
+    start_date: row.start_date?.slice(0, 10) ?? "",
+    end_date: row.end_date?.slice(0, 10) ?? "",
+    location: row.location ?? "",
+    host: row.host ?? "",
     sort_order: String(row.sort_order ?? 0),
     is_active,
   }
@@ -56,6 +100,14 @@ function buildBody(item: FormState) {
   body.append("name", item.name)
   body.append("description", item.description)
   body.append("cadence", item.cadence)
+  body.append("category", item.category)
+  body.append("status", item.status)
+  // Kosong = hapus nilai (null di backend).
+  body.append("division_id", item.division_id === NO_DIVISION ? "" : item.division_id)
+  body.append("start_date", item.start_date)
+  body.append("end_date", item.end_date)
+  body.append("location", item.location)
+  body.append("host", item.host)
   body.append("sort_order", item.sort_order || "0")
   body.append("is_active", item.is_active ? "true" : "false")
   return body
@@ -70,6 +122,16 @@ export default function AdminWorkProgramsPage() {
     >("/work_programs")
     return unwrapList(result)
   })
+  const divisions = useApi(() =>
+    apiRequest<Division[] | { items: Division[] }>("/divisions").then(unwrapList)
+  )
+  const divisionItems = useMemo(
+    () => [
+      { value: NO_DIVISION, label: "Tanpa divisi" },
+      ...(divisions.data ?? []).map((d) => ({ value: String(d.id), label: d.name })),
+    ],
+    [divisions.data]
+  )
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<WorkProgramItem | null>(null)
   const [deleting, setDeleting] = useState<WorkProgramItem | null>(null)
@@ -98,6 +160,10 @@ export default function AdminWorkProgramsPage() {
   }
 
   async function handleSubmit() {
+    if (form.start_date && form.end_date && form.end_date < form.start_date) {
+      toast.error("Tanggal selesai tidak boleh sebelum tanggal mulai")
+      return
+    }
     setSaving(true)
     try {
       const body = buildBody(form)
@@ -155,6 +221,37 @@ export default function AdminWorkProgramsPage() {
         cell: ({ row }) => (
           <span className="font-medium">{row.original.name}</span>
         ),
+      },
+      {
+        id: "kategori",
+        accessorKey: "category",
+        header: "Kategori",
+        cell: ({ row }) => categoryLabel(row.original.category || "program_kerja"),
+      },
+      {
+        id: "status",
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <Badge
+            variant={row.original.status === "done" ? "secondary" : "default"}
+          >
+            {statusLabel(row.original.status || "upcoming")}
+          </Badge>
+        ),
+      },
+      {
+        id: "tanggal",
+        accessorKey: "start_date",
+        header: "Tanggal",
+        cell: ({ row }) =>
+          formatProgramDate(row.original.start_date, row.original.end_date) || "-",
+      },
+      {
+        id: "divisi",
+        accessorKey: "division_name",
+        header: "Divisi",
+        cell: ({ row }) => row.original.division_name || "-",
       },
       {
         id: "periode",
@@ -279,6 +376,105 @@ export default function AdminWorkProgramsPage() {
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
+            <Field>
+              <FieldLabel>Kategori</FieldLabel>
+              <Select
+                items={CATEGORY_ITEMS}
+                value={form.category}
+                onValueChange={(v) => {
+                  if (v == null) return
+                  setForm({ ...form, category: v })
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih kategori" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_ITEMS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Status</FieldLabel>
+              <Select
+                items={STATUS_ITEMS}
+                value={form.status}
+                onValueChange={(v) => {
+                  if (v == null) return
+                  setForm({ ...form, status: v })
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_ITEMS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Divisi penyelenggara</FieldLabel>
+              <Select
+                items={divisionItems}
+                value={form.division_id}
+                onValueChange={(v) => {
+                  if (v == null) return
+                  setForm({ ...form, division_id: v })
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih divisi" />
+                </SelectTrigger>
+                <SelectContent>
+                  {divisionItems.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel>Tuan rumah</FieldLabel>
+              <Input
+                value={form.host}
+                onChange={(e) => setForm({ ...form, host: e.target.value })}
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Tanggal mulai</FieldLabel>
+              <Input
+                type="date"
+                value={form.start_date}
+                onChange={(e) =>
+                  setForm({ ...form, start_date: e.target.value })
+                }
+              />
+            </Field>
+            <Field>
+              <FieldLabel>Tanggal selesai</FieldLabel>
+              <Input
+                type="date"
+                min={form.start_date || undefined}
+                value={form.end_date}
+                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+              />
+            </Field>
+            <Field className="sm:col-span-2">
+              <FieldLabel>Lokasi pelaksanaan</FieldLabel>
+              <Input
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+              />
+            </Field>
             <Field>
               <FieldLabel>Periode</FieldLabel>
               <Input
