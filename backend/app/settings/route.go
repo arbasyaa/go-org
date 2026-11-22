@@ -17,7 +17,7 @@ func GET(ctx *views.Context) error {
 	}
 	return ctx.Success(200, "settings", map[string]any{
 		"web_name": s.WebName, "logo_url": s.LogoURL, "icon_url": s.IconURL,
-		"theme": s.Theme, "appearance": s.Appearance,
+		"theme": s.Theme, "appearance": s.Appearance, "landing_sections": s.LandingSections,
 		"allow_self_register":              s.AllowSelfRegister,
 		"allow_cross_division_events_view": s.AllowCrossDivisionEventsView,
 	})
@@ -60,6 +60,8 @@ func putSettings(ctx *views.Context) error {
 			}
 		}
 	}
+	// landing_sections tidak ditulis lewat sini; pakai PUT /landing_sections.
+	delete(values, "landing_sections")
 	logo, logoHdr, _ := ctx.FormFile("logo")
 	icon, iconHdr, _ := ctx.FormFile("icon")
 	s, err := services.SettingsService{}.Update(ctx.Request.Context(), values, logo, icon, logoHdr, iconHdr)

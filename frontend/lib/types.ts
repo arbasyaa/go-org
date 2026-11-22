@@ -59,7 +59,11 @@ export interface OrganizationSettings {
   appearance?: string
   allow_self_register?: boolean
   allow_cross_division_events_view?: boolean
+  /** JSON object string {section: bool}; kosong / key hilang = tampil. */
+  landing_sections?: string
 }
+
+import type { EventAssignee } from "@/lib/invitation"
 
 export interface Event {
   id: number
@@ -75,6 +79,8 @@ export interface Event {
   link_url?: string | null
   start_time: string
   end_time: string
+  /** Event yang hanya punya tanggal (tanpa jam), mis. hasil konversi undangan. */
+  all_day?: boolean
   status: "upcoming" | "ongoing" | "finished" | string
   allow_permission?: boolean
   audience?: "all" | "custom" | string
@@ -87,6 +93,9 @@ export interface Event {
   my_attendance_status?: string | null
   my_permission_request_status?: string | null
   is_participant?: boolean
+  /** Peserta yang ditugaskan berangkat (khusus event hasil undangan). */
+  assignees?: EventAssignee[]
+  assignee_count?: number
 }
 
 export interface Attendance {
@@ -301,7 +310,8 @@ export interface Paginated<T> {
 }
 
 export interface LoginResponse {
-  token: string
+  /** Tidak lagi dikirim ke browser — token ada di cookie HttpOnly. */
+  token?: string
   user: User
 }
 
@@ -310,7 +320,19 @@ export interface NavItem {
   url: string
   icon?: ReactNode
   permission?: string | string[]
-  items?: { title: string; url: string; permission?: string | string[] }[]
+  items?: NavSubItem[]
+}
+
+export interface NavSubItem {
+  title: string
+  url: string
+  permission?: string | string[]
+}
+
+export interface NavGroup {
+  /** Tanpa label = grup pertama (tidak ada judul grup). */
+  label?: string
+  items: NavItem[]
 }
 
 export interface ActivityLog {

@@ -30,7 +30,7 @@ import { useApi } from "@/hooks/use-api"
 import { useAudienceCatalog } from "@/hooks/use-audience-catalog"
 import { apiRequest } from "@/lib/api"
 import { toLocalInput, toRFC3339, endOfDayInput } from "@/lib/datetime"
-import { formatDate, unwrapList } from "@/lib/format"
+import { formatDate, formatDateOnly, unwrapList } from "@/lib/format"
 import { eventBannerUrl } from "@/lib/event-banner"
 import { EventAudienceBadge } from "@/lib/event-audience"
 import type { Event } from "@/lib/types"
@@ -208,7 +208,10 @@ export default function AdminEventsPage() {
         id: "mulai",
         accessorKey: "start_time",
         header: sortableHeader("Mulai"),
-        cell: ({ row }) => formatDate(row.original.start_time),
+        cell: ({ row }) =>
+          row.original.all_day
+            ? formatDateOnly(row.original.start_time)
+            : formatDate(row.original.start_time),
       },
       {
         id: "cakupan",

@@ -5,7 +5,6 @@ import {
   Manrope,
   Plus_Jakarta_Sans,
   Poppins,
-  Public_Sans,
   Space_Grotesk,
 } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
@@ -41,13 +40,6 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   display: "swap",
 })
-// Pasangan font landing page (frontend/DESIGN.md): display & body.
-const publicSans = Public_Sans({
-  variable: "--font-public-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-})
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   preload: false,
@@ -68,7 +60,6 @@ const fontVariables = [
   spaceGrotesk.variable,
   jakarta.variable,
   lora.variable,
-  publicSans.variable,
 ].join(" ")
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
@@ -119,6 +110,10 @@ export default function RootLayout({
     <html
       lang="id"
       suppressHydrationWarning
+      /* Next.js memakai atribut ini untuk mematikan smooth scroll saat transisi
+         route, supaya halaman baru tidak meluncur dari posisi scroll lama.
+         Tanpa ini Next menulis peringatan di console setiap navigasi. */
+      data-scroll-behavior="smooth"
       className={`${fontVariables} h-full antialiased`}
     >
       <body className="font-sans min-h-full flex flex-col">

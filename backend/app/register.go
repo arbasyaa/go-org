@@ -19,6 +19,8 @@ import (
 	app_event_audience "backend/app/event_audience"
 	app_events "backend/app/events"
 	app_events_id "backend/app/events/_id"
+	app_events_id_assignees "backend/app/events/_id/assignees"
+	app_events_id_assignees_userId "backend/app/events/_id/assignees/_userId"
 	app_events_id_attendance "backend/app/events/_id/attendance"
 	app_events_id_attendance_me "backend/app/events/_id/attendance/me"
 	app_events_id_recap "backend/app/events/_id/recap"
@@ -29,6 +31,13 @@ import (
 	app_finance_transactions_id "backend/app/finance_transactions/_id"
 	app_finance_transactions_dashboard "backend/app/finance_transactions/dashboard"
 	app_finance_transactions_summary "backend/app/finance_transactions/summary"
+	app_himpunan "backend/app/himpunan"
+	app_himpunan_id "backend/app/himpunan/_id"
+	app_invitations "backend/app/invitations"
+	app_invitations_id "backend/app/invitations/_id"
+	app_invitations_id_convert "backend/app/invitations/_id/convert"
+	app_invitations_id_download "backend/app/invitations/_id/download"
+	app_landing_sections "backend/app/landing_sections"
 	app_letter_categories "backend/app/letter_categories"
 	app_letter_categories_id "backend/app/letter_categories/_id"
 	app_letter_categories_id_preview_number "backend/app/letter_categories/_id/preview_number"
@@ -45,13 +54,23 @@ import (
 	app_me_password "backend/app/me/password"
 	app_me_permissions "backend/app/me/permissions"
 	app_members "backend/app/members"
+	app_merch "backend/app/merch"
+	app_merch_id "backend/app/merch/_id"
 	app_permission_categories "backend/app/permission_categories"
 	app_permission_categories_id "backend/app/permission_categories/_id"
 	app_permission_requests "backend/app/permission_requests"
 	app_permission_requests_me "backend/app/permission_requests/me"
 	app_permissions "backend/app/permissions"
+	app_press_releases "backend/app/press_releases"
+	app_press_releases_id "backend/app/press_releases/_id"
+	app_public_himpunan "backend/app/public/himpunan"
+	app_public_invitations "backend/app/public/invitations"
+	app_public_merch "backend/app/public/merch"
+	app_public_press_releases "backend/app/public/press_releases"
+	app_public_press_releases_slug "backend/app/public/press_releases/_slug"
 	app_public_recruitment_slug "backend/app/public/recruitment/_slug"
 	app_public_recruitment_slug_submit "backend/app/public/recruitment/_slug/submit"
+	app_public_work_programs "backend/app/public/work_programs"
 	app_push_subscribe "backend/app/push/subscribe"
 	app_recruitments "backend/app/recruitments"
 	app_recruitments_id "backend/app/recruitments/_id"
@@ -78,6 +97,8 @@ import (
 	app_violations_me "backend/app/violations/me"
 	app_wallets "backend/app/wallets"
 	app_wallets_id "backend/app/wallets/_id"
+	app_work_programs "backend/app/work_programs"
+	app_work_programs_id "backend/app/work_programs/_id"
 	"github.com/lrndwy/gokil/framework"
 )
 
@@ -107,6 +128,9 @@ func init() {
 	framework.RegisterRoute("GET", "/events/:id", app_events_id.GET)
 	framework.RegisterRoute("PUT", "/events/:id", app_events_id.PUT)
 	framework.RegisterRoute("DELETE", "/events/:id", app_events_id.DELETE)
+	framework.RegisterRoute("GET", "/events/:id/assignees", app_events_id_assignees.GET)
+	framework.RegisterRoute("POST", "/events/:id/assignees", app_events_id_assignees.POST)
+	framework.RegisterRoute("DELETE", "/events/:id/assignees/:userId", app_events_id_assignees_userId.DELETE)
 	framework.RegisterRoute("POST", "/events/:id/attendance", app_events_id_attendance.POST)
 	framework.RegisterRoute("GET", "/events/:id/attendance/me", app_events_id_attendance_me.GET)
 	framework.RegisterRoute("GET", "/events/:id/recap", app_events_id_recap.GET)
@@ -121,6 +145,17 @@ func init() {
 	framework.RegisterRoute("DELETE", "/finance_transactions/:id", app_finance_transactions_id.DELETE)
 	framework.RegisterRoute("GET", "/finance_transactions/dashboard", app_finance_transactions_dashboard.GET)
 	framework.RegisterRoute("GET", "/finance_transactions/summary", app_finance_transactions_summary.GET)
+	framework.RegisterRoute("GET", "/himpunan", app_himpunan.GET)
+	framework.RegisterRoute("POST", "/himpunan", app_himpunan.POST)
+	framework.RegisterRoute("GET", "/himpunan/:id", app_himpunan_id.GET)
+	framework.RegisterRoute("PUT", "/himpunan/:id", app_himpunan_id.PUT)
+	framework.RegisterRoute("DELETE", "/himpunan/:id", app_himpunan_id.DELETE)
+	framework.RegisterRoute("GET", "/invitations", app_invitations.GET)
+	framework.RegisterRoute("GET", "/invitations/:id", app_invitations_id.GET)
+	framework.RegisterRoute("DELETE", "/invitations/:id", app_invitations_id.DELETE)
+	framework.RegisterRoute("POST", "/invitations/:id/convert", app_invitations_id_convert.POST)
+	framework.RegisterRoute("GET", "/invitations/:id/download", app_invitations_id_download.GET)
+	framework.RegisterRoute("PUT", "/landing_sections", app_landing_sections.PUT)
 	framework.RegisterRoute("GET", "/letter_categories", app_letter_categories.GET)
 	framework.RegisterRoute("POST", "/letter_categories", app_letter_categories.POST)
 	framework.RegisterRoute("PUT", "/letter_categories/:id", app_letter_categories_id.PUT)
@@ -145,6 +180,11 @@ func init() {
 	framework.RegisterRoute("PUT", "/me/password", app_me_password.PUT)
 	framework.RegisterRoute("GET", "/me/permissions", app_me_permissions.GET)
 	framework.RegisterRoute("GET", "/members", app_members.GET)
+	framework.RegisterRoute("GET", "/merch", app_merch.GET)
+	framework.RegisterRoute("POST", "/merch", app_merch.POST)
+	framework.RegisterRoute("GET", "/merch/:id", app_merch_id.GET)
+	framework.RegisterRoute("PUT", "/merch/:id", app_merch_id.PUT)
+	framework.RegisterRoute("DELETE", "/merch/:id", app_merch_id.DELETE)
 	framework.RegisterRoute("GET", "/permission_categories", app_permission_categories.GET)
 	framework.RegisterRoute("POST", "/permission_categories", app_permission_categories.POST)
 	framework.RegisterRoute("PUT", "/permission_categories/:id", app_permission_categories_id.PUT)
@@ -152,8 +192,19 @@ func init() {
 	framework.RegisterRoute("POST", "/permission_requests", app_permission_requests.POST)
 	framework.RegisterRoute("GET", "/permission_requests/me", app_permission_requests_me.GET)
 	framework.RegisterRoute("GET", "/permissions", app_permissions.GET)
+	framework.RegisterRoute("GET", "/press_releases", app_press_releases.GET)
+	framework.RegisterRoute("POST", "/press_releases", app_press_releases.POST)
+	framework.RegisterRoute("GET", "/press_releases/:id", app_press_releases_id.GET)
+	framework.RegisterRoute("PUT", "/press_releases/:id", app_press_releases_id.PUT)
+	framework.RegisterRoute("DELETE", "/press_releases/:id", app_press_releases_id.DELETE)
+	framework.RegisterRoute("GET", "/public/himpunan", app_public_himpunan.GET)
+	framework.RegisterRoute("POST", "/public/invitations", app_public_invitations.POST)
+	framework.RegisterRoute("GET", "/public/merch", app_public_merch.GET)
+	framework.RegisterRoute("GET", "/public/press_releases", app_public_press_releases.GET)
+	framework.RegisterRoute("GET", "/public/press_releases/:slug", app_public_press_releases_slug.GET)
 	framework.RegisterRoute("GET", "/public/recruitment/:slug", app_public_recruitment_slug.GET)
 	framework.RegisterRoute("POST", "/public/recruitment/:slug/submit", app_public_recruitment_slug_submit.POST)
+	framework.RegisterRoute("GET", "/public/work_programs", app_public_work_programs.GET)
 	framework.RegisterRoute("GET", "/push/subscribe", app_push_subscribe.GET)
 	framework.RegisterRoute("POST", "/push/subscribe", app_push_subscribe.POST)
 	framework.RegisterRoute("DELETE", "/push/subscribe", app_push_subscribe.DELETE)
@@ -198,4 +249,9 @@ func init() {
 	framework.RegisterRoute("POST", "/wallets", app_wallets.POST)
 	framework.RegisterRoute("PUT", "/wallets/:id", app_wallets_id.PUT)
 	framework.RegisterRoute("DELETE", "/wallets/:id", app_wallets_id.DELETE)
+	framework.RegisterRoute("GET", "/work_programs", app_work_programs.GET)
+	framework.RegisterRoute("POST", "/work_programs", app_work_programs.POST)
+	framework.RegisterRoute("GET", "/work_programs/:id", app_work_programs_id.GET)
+	framework.RegisterRoute("PUT", "/work_programs/:id", app_work_programs_id.PUT)
+	framework.RegisterRoute("DELETE", "/work_programs/:id", app_work_programs_id.DELETE)
 }

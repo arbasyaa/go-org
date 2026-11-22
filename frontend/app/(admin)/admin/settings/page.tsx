@@ -107,7 +107,7 @@ export default function AdminSettingsPage() {
               <CardDescription>Konfigurasi branding dan kebijakan sistem</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSave}>
+              <form id="settings-form" onSubmit={handleSave}>
                 <FieldGroup>
                   <Field>
                     <FieldLabel>Nama Web</FieldLabel>

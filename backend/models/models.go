@@ -29,6 +29,12 @@ func init() {
 		&LetterCategory{},
 		&LetterTemplate{},
 		&Letter{},
+		&Invitation{},
+		&PressRelease{},
+		&MerchItem{},
+		&Himpunan{},
+		&WorkProgram{},
+		&EventAssignee{},
 		&Announcement{},
 		&AnnouncementAttachment{},
 		&FinanceCategory{},
@@ -51,6 +57,8 @@ type OrganizationSettings struct {
 	Appearance                   string `orm:"text;default:''" json:"appearance"`
 	AllowSelfRegister            bool   `orm:"default:false" json:"allow_self_register"`
 	AllowCrossDivisionEventsView bool   `orm:"default:false" json:"allow_cross_division_events_view"`
+	// JSON object string: section landing -> bool (kosong / key hilang = tampil).
+	LandingSections string `orm:"text;default:''" json:"landing_sections"`
 }
 
 type Role struct {
@@ -114,6 +122,9 @@ type Event struct {
 	StartTime       time.Time               `json:"start_time"`
 	EndTime         time.Time               `json:"end_time"`
 	AllowPermission bool                    `orm:"default:false" json:"allow_permission"`
+	// AllDay: event yang hanya punya tanggal, tanpa jam (mis. hasil konversi
+	// undangan). UI menampilkan tanggal saja dan tidak menyebut jam.
+	AllDay bool `orm:"default:false" json:"all_day"`
 	// Audience: 'all' = seluruh anggota, 'custom' = pakai event_target_division/role.
 	Audience    string              `orm:"size:20;default:custom" json:"audience"`
 	Status      string              `orm:"size:20;default:upcoming" json:"status"`
@@ -368,4 +379,106 @@ type DBVersion struct {
 	orm.BaseModel
 	Version   int64      `orm:"unique" json:"version"`
 	AppliedAt *time.Time `json:"applied_at"`
+}
+
+// Invitation: undangan masuk dari himpunan lain, dikirim lewat form publik
+// /undangan (tanpa login) dan berisi satu lampiran PDF.
+//
+// Alur: submitted (baru masuk) -> converted (sudah dijadikan Event).
+// `EventID` menunjuk hasil konversi; nil = belum dikonversi. Penugasan
+// peserta tinggal di EventAssignee (milik event, bukan undangan).
+type Invitation struct {
+	orm.BaseModel
+	OrganizationName string `orm:"required,size:150" json:"organization_name"`
+	EventName        string `orm:"required,size:200" json:"event_name"`
+	// Tanggal berlangsung acara (tanggal saja, tanpa jam).
+	EventDate     time.Time `orm:"type:date" json:"event_date"`
+	AttachmentURL string    `orm:"size:512" json:"attachment_url"`
+	// Nama file asli untuk Content-Disposition saat diunduh.
+	AttachmentName string               `orm:"size:255" json:"attachment_name"`
+	AttachmentSize int64                `json:"attachment_size"`
+	Status         string               `orm:"size:20;default:submitted" json:"status"`
+	Event          orm.BelongsTo[Event] `json:"-"`
+	EventID        *int64               `orm:"null;index" json:"event_id"`
+	// IP pengirim untuk triage spam (form publik, tanpa auth).
+	SubmittedIP string `orm:"size:45" json:"submitted_ip"`
+}
+
+// EventAssignee: peserta yang ditugaskan berangkat pada satu event.
+//
+// Khusus event hasil konversi undangan, daftar ini yang mengisi "siapa saja
+// yang ikut". Dipisah dari Attendance karena penugasan adalah keputusan
+// administratif (siapa yang dikirim), bukan bukti kehadiran fisik.
+type EventAssignee struct {
+	orm.BaseModel
+	Event   orm.BelongsTo[Event] `orm:"required" json:"-"`
+	EventID int64                `orm:"index" json:"event_id"`
+	User    orm.BelongsTo[User]  `orm:"required" json:"-"`
+	UserID  int64                `orm:"index" json:"user_id"`
+	// AssignedByID nil = user mendaftarkan dirinya sendiri.
+	AssignedBy   orm.BelongsTo[User] `json:"-"`
+	AssignedByID *int64              `orm:"null;index" json:"assigned_by_id"`
+}
+
+// PressRelease: siaran pers / berita organisasi untuk landing page publik.
+//
+// Draft (Published=false) hanya terlihat admin. PublishedAt diisi sekali saat
+// pertama kali dipublikasikan dan tidak diubah lagi walau di-unpublish lalu
+// publish ulang. Slug unik, dibuat dari judul (sufiks -2, -3 bila bentrok).
+type PressRelease struct {
+	orm.BaseModel
+	Title   string `orm:"required,size:200" json:"title"`
+	Slug    string `orm:"unique,size:220" json:"slug"`
+	Excerpt string `orm:"size:500" json:"excerpt"`
+	// HTML dari rich text editor; disanitasi di service sebelum disimpan.
+	Content     string              `orm:"type:text" json:"content"`
+	CoverURL    string              `orm:"size:512" json:"cover_url"`
+	Category    string              `orm:"size:50;default:Siaran Pers" json:"category"`
+	Published   bool                `orm:"default:false" json:"published"`
+	PublishedAt *time.Time          `orm:"null" json:"published_at"`
+	CreatedBy   orm.BelongsTo[User] `json:"-"`
+	CreatedByID *int64              `orm:"null;index" json:"-"`
+}
+
+// MerchItem: produk merchandise yang ditampilkan di landing page. Pemesanan
+// lewat OrderURL (WhatsApp/marketplace), bukan checkout di aplikasi.
+type MerchItem struct {
+	orm.BaseModel
+	Name        string `orm:"required,size:150" json:"name"`
+	Description string `orm:"type:text" json:"description"`
+	// Harga rupiah (bilangan bulat, >= 0).
+	Price    int64  `json:"price"`
+	ImageURL string `orm:"size:512" json:"image_url"`
+	OrderURL string `orm:"size:512" json:"order_url"`
+	Category string `orm:"size:50;default:Apparel" json:"category"`
+	IsActive bool   `orm:"default:true" json:"is_active"`
+	// ready | preorder | soldout (divalidasi di service).
+	StockStatus string `orm:"size:20;default:ready" json:"stock_status"`
+	SortOrder   int    `orm:"default:0" json:"sort_order"`
+}
+
+// Himpunan: himpunan anggota yang ditampilkan di landing page.
+type Himpunan struct {
+	orm.BaseModel
+	Name        string `orm:"required,size:150" json:"name"`
+	ShortLabel  string `orm:"size:60" json:"short_label"`
+	Institution string `orm:"size:200" json:"institution"`
+	City        string `orm:"size:100" json:"city"`
+	Address     string `orm:"type:text" json:"address"`
+	Email       string `orm:"size:150" json:"email"`
+	LogoURL     string `orm:"size:512" json:"logo_url"`
+	IsActive    bool   `orm:"default:true" json:"is_active"`
+	SortOrder   int    `orm:"default:0" json:"sort_order"`
+	// Region: daerah 1-6; 0 = belum ditentukan.
+	Region int `orm:"default:0" json:"region"`
+}
+
+// WorkProgram: program kerja yang ditampilkan di landing page.
+type WorkProgram struct {
+	orm.BaseModel
+	Name        string `orm:"required,size:150" json:"name"`
+	Description string `orm:"type:text" json:"description"`
+	Cadence     string `orm:"size:50" json:"cadence"`
+	IsActive    bool   `orm:"default:true" json:"is_active"`
+	SortOrder   int    `orm:"default:0" json:"sort_order"`
 }

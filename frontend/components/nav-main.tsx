@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import type { NavGroup, NavItem } from "@/lib/types"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -20,24 +21,20 @@ import {
 } from "@/components/ui/sidebar"
 import { ChevronRightIcon, CircleIcon } from "lucide-react"
 
-type NavMainItem = {
-  title: string
-  url: string
-  icon?: ReactNode
-  isActive?: boolean
-  items?: {
-    title: string
-    url: string
-  }[]
-}
+function NavCollapsibleItem({
+  item,
+  activeUrl,
+}: {
+  item: NavItem
+  activeUrl: string | null
+}) {
+  const hasActiveSub = !!item.items?.some((sub) => sub.url === activeUrl)
+  const [open, setOpen] = useState(hasActiveSub)
+  const [wasActive, setWasActive] = useState(hasActiveSub)
 
-function NavCollapsibleItem({ item }: { item: NavMainItem }) {
-  const [open, setOpen] = useState(!!item.isActive)
-  const [wasActive, setWasActive] = useState(!!item.isActive)
-
-  if (!!item.isActive !== wasActive) {
-    setWasActive(!!item.isActive)
-    if (item.isActive) setOpen(true)
+  if (hasActiveSub !== wasActive) {
+    setWasActive(hasActiveSub)
+    if (hasActiveSub) setOpen(true)
   }
 
   return (
@@ -59,8 +56,11 @@ function NavCollapsibleItem({ item }: { item: NavMainItem }) {
       <CollapsibleContent>
         <SidebarMenuSub>
           {item.items?.map((subItem) => (
-            <SidebarMenuSubItem key={subItem.title}>
-              <SidebarMenuSubButton render={<Link href={subItem.url} />}>
+            <SidebarMenuSubItem key={subItem.url}>
+              <SidebarMenuSubButton
+                isActive={subItem.url === activeUrl}
+                render={<Link href={subItem.url} />}
+              >
                 <span>{subItem.title}</span>
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
@@ -71,28 +71,43 @@ function NavCollapsibleItem({ item }: { item: NavMainItem }) {
   )
 }
 
-export function NavMain({ items }: { items: NavMainItem[] }) {
+/** Satu SidebarGroup per NavGroup; grup pertama tanpa label. */
+export function NavMain({
+  groups,
+  activeUrl,
+}: {
+  groups: NavGroup[]
+  activeUrl: string | null
+}) {
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Menu</SidebarGroupLabel>
-      <SidebarMenu>
-        {items.map((item) =>
-          item.items?.length ? (
-            <NavCollapsibleItem key={item.title} item={item} />
-          ) : (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                tooltip={item.title}
-                isActive={item.isActive}
-                render={<Link href={item.url} />}
-              >
-                {item.icon ?? <CircleIcon className="size-4" />}
-                <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )
-        )}
-      </SidebarMenu>
-    </SidebarGroup>
+    <>
+      {groups.map((group, index) => (
+        <SidebarGroup key={group.label ?? `group-${index}`}>
+          {group.label ? <SidebarGroupLabel>{group.label}</SidebarGroupLabel> : null}
+          <SidebarMenu>
+            {group.items.map((item) =>
+              item.items?.length ? (
+                <NavCollapsibleItem
+                  key={item.title}
+                  item={item}
+                  activeUrl={activeUrl}
+                />
+              ) : (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    isActive={item.url === activeUrl}
+                    render={<Link href={item.url} />}
+                  >
+                    {item.icon ?? <CircleIcon className="size-4" />}
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            )}
+          </SidebarMenu>
+        </SidebarGroup>
+      ))}
+    </>
   )
 }

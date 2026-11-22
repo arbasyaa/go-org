@@ -6,6 +6,7 @@ const pages = [
   "/dashboard",
   "/profile",
   "/events",
+  "/invitations",
   "/my-permissions",
   "/announcements",
   "/admin",
@@ -29,6 +30,8 @@ const pages = [
   "/admin/announcements/create",
   "/admin/finance",
   "/admin/settings",
+  // Publik (tanpa login): form undangan untuk himpunan luar.
+  "/undangan",
 ]
 
 const errors = []

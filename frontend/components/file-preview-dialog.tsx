@@ -45,28 +45,39 @@ export function FilePreviewDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-auto bg-muted/10 p-4">
-          <FilePreview url={url} fileName={fileName} className="h-full" />
+          {url ? (
+            <FilePreview url={url} fileName={fileName} className="h-full" />
+          ) : (
+            // Jangan render <iframe>/<img> dengan src kosong: browser akan
+            // memuat ulang halaman dan React menulis peringatan.
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              Berkas tidak tersedia.
+            </p>
+          )}
         </div>
 
-        <DialogFooter className="border-t px-6 py-3">
-          <Button
-            render={
-              <a href={url} target="_blank" rel="noreferrer" />
-            }
-          >
-            <ExternalLinkIcon className="size-4" />
-            Buka di Tab Baru
-          </Button>
-          <Button
-            variant="outline"
-            render={
-              <a href={url} download={fileName} />
-            }
-          >
-            <DownloadIcon className="size-4" />
-            Unduh
-          </Button>
-        </DialogFooter>
+        {/* Tombol unduh/buka hanya berguna kalau URL-nya ada. */}
+        {url ? (
+          <DialogFooter className="border-t px-6 py-3">
+            <Button
+              render={
+                <a href={url} target="_blank" rel="noreferrer" />
+              }
+            >
+              <ExternalLinkIcon className="size-4" />
+              Buka di Tab Baru
+            </Button>
+            <Button
+              variant="outline"
+              render={
+                <a href={url} download={fileName} />
+              }
+            >
+              <DownloadIcon className="size-4" />
+              Unduh
+            </Button>
+          </DialogFooter>
+        ) : null}
       </DialogContent>
     </Dialog>
   )

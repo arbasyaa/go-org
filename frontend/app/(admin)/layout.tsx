@@ -1,22 +1,9 @@
-"use client"
-
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { adminNavItems, adminSecondaryNav } from "@/lib/nav-config"
+import { PortalShell } from "@/components/portal-shell"
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <SidebarProvider>
-      <AppSidebar
-        navItems={adminNavItems}
-        secondaryItems={adminSecondaryNav}
-        menuVariant="admin"
-      />
-      <SidebarInset>{children}</SidebarInset>
-    </SidebarProvider>
-  )
+  return <PortalShell>{children}</PortalShell>
 }

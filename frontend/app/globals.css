@@ -43,16 +43,21 @@
   background-image:
     linear-gradient(
       to right,
-      color-mix(in oklab, var(--landing-parchment) 10%, transparent) 1px,
+      color-mix(in oklab, var(--landing-on-ink) 9%, transparent) 1px,
       transparent 1px
     ),
     linear-gradient(
       to bottom,
-      color-mix(in oklab, var(--landing-parchment) 10%, transparent) 1px,
+      color-mix(in oklab, var(--landing-on-ink) 9%, transparent) 1px,
       transparent 1px
     );
   background-size: 44px 44px;
 }
+
+/* Landing memakai GSAP (components/landing/landing-motion.tsx) untuk semua
+   animasi scroll. Tidak ada state "tersembunyi" di CSS: elemen baru
+   disembunyikan oleh GSAP saat mount, jadi tanpa JS konten tetap terbaca dan
+   tidak ada risiko halaman kosong kalau skrip gagal. */
 
 /* Dark mode dihapus: varian `dark:` tetap didefinisikan agar utility bawaan
    komponen shadcn tidak jatuh ke prefers-color-scheme, tapi `.dark` tidak
@@ -63,16 +68,143 @@
    font Publik Sans + Space Grotesk. Hex hanya hidup di sini, komponen landing
    mereferensikan lewat var() agar konsisten dengan konvensi token proyek. */
 :root {
-  --landing-ink: #004fa1;
-  --landing-ink-deep: #003a75;
-  --landing-ink-soft: #848fbb;
-  --landing-parchment: #f1f1e6;
-  --landing-paper: #ffffff;
-  --landing-radius-sm: 4px;
-  --landing-radius-md: 8px;
-  --font-landing-display: var(--font-public-sans);
-  --font-landing-body: var(--font-public-sans);
+  /* ---- Palet landing, diekstrak dari logo resmi PERMIKOMNAS ----
+     indigo #27156e (bidang pita), merah #ed3237 (merah bendera), cyan #00a9e6
+     (bola dunia), hijau #00913e (daratan). Paper sengaja DINGIN (bukan krem)
+     supaya tidak jatuh ke palet "warm craft" yang jadi tell AI. */
+  --landing-ink: #27156e;
+  --landing-ink-deep: #1b0e4d;
+  /* Teks sekunder di atas paper: 4.9:1 ke #f2f3f7, aman untuk body 16px. */
+  --landing-ink-muted: #4a4a6a;
+  /* Hairline saja — terlalu terang untuk teks. */
+  --landing-ink-soft: #8e8bab;
+  --landing-paper: #f2f3f7;
+  --landing-paper-raised: #ffffff;
+  --landing-accent: #ed3237;
+  --landing-accent-deep: #c8202a;
+  --landing-cyan: #00a9e6;
+  --landing-green: #00913e;
+  /* Teks di atas bidang indigo. Jangan pakai opacity: 0.9 saja sudah gagal
+     APCA di biru gelap, jadi versi redup ini token tersendiri. */
+  --landing-on-ink: #f4f4fa;
+  --landing-on-ink-dim: #d7d5e8;
+  /* Radius: satu skala (8/16) + pill untuk kontrol. Tidak campur 4px. */
+  --landing-radius-sm: 8px;
+  --landing-radius-md: 16px;
   --font-landing-label: var(--font-space-grotesk);
+}
+
+/* Variabel font landing di-set pada [data-landing] (layout publik), jadi
+   alias-nya harus dideklarasikan di sana agar var() ter-resolve. */
+[data-landing] {
+  --font-landing-display: var(--font-bricolage);
+  --font-landing-body: var(--font-instrument-sans);
+}
+
+/* ---- Landing: utilitas motion & editorial (rework 2026-11) ---- */
+/* Lenis mengambil alih scroll; scroll-behavior bawaan harus mati agar tidak
+   bertabrakan dengan interpolasi Lenis. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+/* Grain halus di atas bidang indigo: memecah banding gradien di layar lebar. */
+@utility landing-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* Dijeda oleh landing-motion saat section di luar viewport (hemat repaint). */
+[data-offscreen],
+[data-offscreen] * {
+  animation-play-state: paused !important;
+}
+
+@keyframes landing-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
+}
+
+@keyframes landing-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+@keyframes landing-card-in {
+  from { opacity: 0; transform: translateY(28px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes landing-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Teks outline untuk wordmark raksasa. */
+@utility landing-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in oklab, var(--landing-on-ink) 35%, transparent);
+}
+
+/* Fokus terlihat di atas bidang gelap & terang landing. */
+[data-landing] :is(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--landing-cyan);
+  outline-offset: 3px;
+}
+
+/* Isi artikel press release (HTML dari rich text editor). */
+.landing-prose {
+  font-family: var(--font-landing-body);
+  color: var(--landing-ink);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+.landing-prose > * + * {
+  margin-top: 1.25em;
+}
+.landing-prose :is(h1, h2, h3, h4) {
+  font-family: var(--font-landing-display);
+  font-weight: 800;
+  line-height: 1.15;
+  margin-top: 2em;
+}
+.landing-prose h2 {
+  font-size: 1.75rem;
+}
+.landing-prose h3 {
+  font-size: 1.375rem;
+}
+.landing-prose a {
+  color: var(--landing-accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.landing-prose :is(ul, ol) {
+  padding-left: 1.4em;
+}
+.landing-prose ul {
+  list-style: disc;
+}
+.landing-prose ol {
+  list-style: decimal;
+}
+.landing-prose blockquote {
+  border-left: 3px solid var(--landing-accent);
+  padding-left: 1.1em;
+  color: var(--landing-ink-muted);
+  font-style: italic;
+}
+.landing-prose img {
+  border-radius: var(--landing-radius-md);
+  width: 100%;
+  height: auto;
 }
 
 @theme inline {
@@ -184,6 +316,12 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Lompat antar-section di landing tidak lagi tertutup header lengket. */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
   /* Kontrak state untuk elemen interaktif non-shadcn (mis. tombol tanggal dan
      chip di kalender). Komponen shadcn menimpanya dengan utility sendiri. */

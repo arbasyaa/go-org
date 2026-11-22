@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getApiBase } from "@/lib/api"
-import { getStoredToken, setStoredToken } from "@/lib/auth"
+import { logout } from "@/lib/auth"
 
 type RestoreResult = {
   files_restored: number
@@ -42,11 +42,9 @@ export default function AdminBackupPage() {
     try {
       const form = new FormData()
       form.append("file", file)
-      const token = getStoredToken()
       const res = await fetch(`${getApiBase()}/backup`, {
         method: "POST",
         credentials: "include",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: form,
       })
       const json = await res.json()
@@ -54,7 +52,7 @@ export default function AdminBackupPage() {
         throw new Error(json.message || "Gagal restore")
       }
       setResult(json.data as RestoreResult)
-      setStoredToken(null)
+      await logout()
       toast.success("Backup berhasil dipulihkan. Silakan login ulang.")
       router.replace("/login")
     } catch (err) {

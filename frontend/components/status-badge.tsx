@@ -11,6 +11,7 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive" | "o
   present: "default",
   permitted: "secondary",
   absent: "destructive",
+  converted: "default",
 }
 
 // Label Indonesia untuk status yang tampil di badge. Nilai dari API tetap enum
@@ -33,6 +34,7 @@ const statusLabel: Record<string, string> = {
   open: "Dibuka",
   closed: "Ditutup",
   submitted: "Terkirim",
+  converted: "Jadi event",
   interview: "Wawancara",
   accepted: "Diterima",
 }

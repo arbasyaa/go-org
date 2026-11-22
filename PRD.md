@@ -318,6 +318,30 @@ Setiap fitur memiliki sekumpulan **permission code** yang dapat di-assign ke Rol
 
 ---
 
+### 3.7b Undangan Masuk (form publik)
+
+**Halaman:**
+- `/undangan` — form publik, **tanpa login** (untuk himpunan/instansi luar)
+- `/invitations` — kotak masuk undangan (setelah login)
+
+**Alur — Pengirim luar:**
+1. Buka `/undangan` (tidak perlu akun).
+2. Isi **Nama Himpunan**, **Nama Acara**, **Tanggal Berlangsung Acara**, unggah **lampiran PDF** (maks 5 MB).
+3. Kirim → undangan masuk ke kotak masuk sekretariat.
+
+**Alur — Pengurus (kotak masuk):**
+1. Buka `/invitations` → daftar undangan dengan nama himpunan, nama acara, tanggal, peserta, status.
+2. **Pratinjau PDF** di dialog, dan bisa **unduh** berkasnya.
+3. **Buat event** → judul event = Nama Acara, tanggal = Tanggal Acara, peserta = semua anggota (`audience = all`) → otomatis tampil di kalender. Sekali per undangan.
+4. **Assign** → menandai siapa yang berangkat. Admin/pengelola bisa menugaskan orang lain; anggota hanya bisa menugaskan dirinya sendiri. Tanpa penugasan, daftar peserta kosong.
+
+**Input publik:** `organization_name, event_name, event_date, attachment (PDF)`
+**Output:** baris undangan + lampiran tersimpan, status `submitted` → `converted`
+
+**Proteksi form publik:** honeypot, rate limit 5 kiriman/jam per IP, validasi magic bytes `%PDF-`, cap 5 MB.
+
+---
+
 ### 3.8 Announcement
 
 **Halaman:**
@@ -761,6 +785,8 @@ Satu aplikasi Next.js di `frontend/` memakai **route groups**:
 | Auth / Publik | `app/(auth)/` | `/login`, `/register` (jika diaktifkan), `/recruitment/:slug` |
 | Anggota | `app/(member)/` | `/dashboard`, `/profile`, `/events`, `/events/:id`, `/events/:id/attendance`, `/my-permissions`, `/announcements`, `/divisions/:id` |
 | Admin / Role berizin | `app/(admin)/admin/` | `/admin/settings`, `/admin/users`, `/admin/users/import`, `/admin/roles`, `/admin/events`, `/admin/events/:id/recap`, `/admin/divisions`, `/admin/permissions`, `/admin/permissions/categories`, `/admin/violations`, `/admin/recruitments`, `/admin/recruitments/:id/submissions`, `/admin/letters/incoming`, `/admin/letters/outgoing`, `/admin/letters/categories`, `/admin/announcements/create` |
+
+**Portal tunggal:** kedua route group memakai satu shell ("Portal Pengurus"): satu sidebar berkelompok dan satu dashboard (`/dashboard`; `/admin` & `/admin/dashboard` redirect ke sana). Menu dan kartu dashboard difilter permission RBAC; aturan filter di `frontend/DESIGN.md` (bagian Portal Pengurus).
 
 **UI:** seluruh tampilan memakai komponen shadcn/ui (preset `base-mira`). Blok yang sudah terpasang: `login-02`, `signup-02`, `sidebar-08` — dijadikan fondasi auth & shell dashboard/admin.
 

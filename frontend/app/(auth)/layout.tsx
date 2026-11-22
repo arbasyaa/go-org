@@ -8,7 +8,7 @@ import { DEFAULT_SITE_NAME } from "@/lib/brand"
  * Panel kanan halaman auth: logo resmi (varian teks putih, latar transparan)
  * di atas warna aksen, bukan foto. Varian putih dipakai karena latarnya gelap.
  */
-const PANEL_LOGO = "/assets/logo-white-text.png"
+const PANEL_LOGO = "/assets/logo-white-text.webp"
 
 export default function AuthLayout({
   children,

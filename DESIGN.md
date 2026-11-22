@@ -139,7 +139,7 @@ Kelas bug yang sudah pernah terjadi — jangan diulang:
 
 | Aturan | Kenapa |
 |---|---|
-| Server Component ambil data lewat **`serverGet`** (`lib/server-api.ts`, membaca cookie `token`), **bukan** `apiRequest` | `apiRequest` mengambil token dari `localStorage`/memori browser yang tidak ada di server → backend balas 401 → `notFound()` → halaman selalu 404 (pernah terjadi di `/admin/events/:id/edit`). |
+| Server Component ambil data lewat **`serverGet`** (`lib/server-api.ts`, membaca cookie `token`), **bukan** `apiRequest` | `apiRequest` di server tidak membawa cookie request user → backend balas 401 → `notFound()` → halaman selalu 404 (pernah terjadi di `/admin/events/:id/edit`). |
 | Jangan hitung **`getApiBase()` saat render** (termasuk di dalam `href`) | Nilainya beda di server (URL internal) dan browser (proxy same-origin). React **tidak menambal** atribut yang beda saat hidrasi → peringatan hydration + link menunjuk host internal di production (pernah terjadi di tombol Download Backup & Unduh surat). Untuk `href`, pakai path proxy relatif `/api/backend/...` — rewrite-nya aktif di semua mode dan unduhan same-origin tetap membawa cookie `token`. |
 | Setiap halaman punya tepat satu `<h1>` | `PageHeader` menyediakannya sebagai `sr-only` karena judul visualnya berupa breadcrumb (`span`). Tanpa ini dokumen tak punya heading/landmark (WCAG 1.3.1). |
 | `getRowId` tabel harus menunjuk field yang benar-benar ada | Baris rekap absensi tidak punya `id` (gabungan roster + absensi) → semuanya menjadi `"undefined"` dan React melempar peringatan duplicate key. Pakai `user_id`. |
@@ -155,7 +155,7 @@ Satu stack, satu domain: **`permikomnasjateng.teknostudio.id`**.
 | Domain Dokploy | service **`frontend`**, container port **3000**, HTTPS on |
 | Port | semua service hanya `expose:`, **tidak ada** `ports:` ke host — Traefik Dokploy yang masuk |
 
-- Browser memakai **proxy same-origin** `/api/backend` → `gokil:8080`. Karena itu tidak ada CORS dan `COOKIE_DOMAIN` dibiarkan kosong. Mode direct-API (`NEXT_PUBLIC_API_URL` + `NEXT_PUBLIC_USE_DIRECT_API=1`) hanya untuk setup API di domain terpisah.
+- Browser memakai **proxy same-origin** `/api/backend` → `gokil:8080`. Karena itu tidak ada CORS dan `COOKIE_DOMAIN` dibiarkan kosong. Panggilan API browser **selalu** lewat proxy ini (sesi = cookie HttpOnly milik origin Next); `NEXT_PUBLIC_USE_DIRECT_API=1` kini hanya memengaruhi URL storage (`lib/storage-url.ts`).
 - `API_INTERNAL_URL` **di-bake saat build**: `rewrites()` di `next.config.ts` di-resolve waktu build (terbukti di `.next/routes-manifest.json`), jadi Dockerfile menerimanya sebagai `ARG` dan compose mengirimnya sebagai build arg. Nilai `127.0.0.1:8080` membuat proxy mati di dalam container.
 - `GOKIL_HOST=0.0.0.0` wajib (bukan `127.0.0.1`) — kalau tidak, container frontend tidak bisa menjangkau backend.
 - `GOKIL_DB_DSN` **tidak** ditulis di env; compose merakitnya dari `GOKIL_DB_USER`/`GOKIL_DB_PASSWORD`/`GOKIL_DB_NAME` supaya password cuma ada di satu tempat.
@@ -274,6 +274,97 @@ Placeholder: `{NOMOR_SURAT}`, `{NAMA_ORGANISASI}`, … Alias legacy `{NOMOR}` / 
 ### 2.11 Announcement
 `title`, `content`, `target_type`, `target_division_id`, `publish_date` + attachments inline di form.
 
+### 2.11.1 Invitation (Undangan Masuk)
+
+Undangan dari himpunan/instansi lain, dikirim lewat form publik `/undangan` (tanpa login). Entity terpisah dari `Letter` karena tidak butuh nomor surat/kategori, tapi punya konsep konversi ke Event dan delegasi.
+
+| Field | Tipe | Catatan |
+|---|---|---|
+| `organization_name` | string(150) | Nama himpunan pengundang |
+| `event_name` | string(200) | Nama acara |
+| `event_date` | date | Tanggal berlangsung; **tanggal saja**, disimpan tengah malam UTC |
+| `attachment_url` | string(512) | PDF di storage (`invitations/<tahun>/<bulan>/<ts>-<nama>`) |
+| `attachment_name` | string(255) | Nama asli, dipakai `Content-Disposition` saat unduh |
+| `attachment_size` | int64 | Ukuran byte |
+| `status` | string(20) | `submitted` \| `converted` |
+| `event_id` | *int64 nullable | Hasil konversi; `NULL` = belum. FK `ON DELETE SET NULL` |
+| `submitted_ip` | string(45) | Triage spam |
+
+**Penugasan peserta tinggal di EVENT, bukan di undangan** (`EventAssignee`, lihat §2.13a). Alasannya: yang menentukan "siapa yang berangkat" adalah eventnya; dengan begitu daftar peserta tampil di detail event dan tetap berlaku walau undangan asalnya dihapus.
+
+**Dua tingkat izin.** Daftar (`GET /invitations`) dan unduh lampiran cukup **login**. `invitations.manage` membuka hapus dan konversi. Konversi butuh **dua** permission: `invitations.manage` + `events.create` — jalur ini membuat baris di tabel `event` yang sama dengan form event biasa, jadi tidak boleh jadi pintu samping.
+
+**Konversi ke Event.** `EventService.Create` dipanggil dengan `audience = "all"` dan **`all_day = true`**. Ini bukan pilihan gaya: `validateAudience("custom", nil, nil)` menolak event tanpa target, dan dengan `all` maka `eventIncludesUser` bernilai true untuk semua user sehingga event langsung tampil di kalender setiap anggota. Idempoten — undangan yang sudah punya `event_id` ditolak `409`.
+
+**Zona waktu tanggal undangan.** `event_date` disimpan sebagai tengah malam **WIB** (`dateOnly` → `Asia/Jakarta`, fallback `FixedZone(+7)`), bukan UTC. Alasannya: form publik hanya meminta tanggal, jadi tengah malam harus jatuh di tengah malam WIB. Kalau disimpan 00:00 UTC, browser WIB menampilkannya sebagai 07:00 dan tanggal selesai melompat ke hari berikutnya (bug "6 Nov jadi 6 Nov 07.00 – 7 Nov 06.59"). Karena itu pula `formatDateOnly` di frontend **tidak** dipatok ke UTC.
+
+**`event.all_day`.** Kolom baru (default `false`) menandai event yang hanya punya tanggal. Event hasil konversi undangan selalu `all_day = true`; UI lalu menampilkan "Tanggal … / Sepanjang hari" tanpa jam, dan chip kalender tidak menyertakan jam. Event yang dibuat manual tetap `all_day = false` sehingga jam mulai/selesai tetap tampil seperti biasa.
+
+**Assign di level undangan, bukan attendance.** Satu sumber kebenaran, bisa dilakukan sebelum maupun sesudah konversi. Konsekuensinya recap event tidak otomatis memuat delegasi; kalau nanti dibutuhkan, salin saat konversi (lihat `PONYTAIL-DEBT.md`).
+
+### 2.11.3 PressRelease & MerchItem (Konten Publik Landing)
+
+Dua resource konten untuk landing page, dikelola admin lewat CRUD dan dibaca publik tanpa login. Business logic di `services/press_release.go` dan `services/merch.go`; helper bersama (slug, magic bytes gambar, sanitizer HTML) di `services/content_common.go`; parsing multipart/JSON di `internal/contentform`.
+
+| Entity | Field kunci | Catatan |
+|---|---|---|
+| `PressRelease` (`press_release`) | `title`(200), `slug` unik(220), `excerpt`(500), `content` (HTML), `cover_url`, `category` (default `Siaran Pers`), `published`, `published_at` *time, `created_by_id` *int64 | Slug dari judul bila kosong, bentrok diberi `-2`, `-3`. `published_at` diisi **sekali** saat pertama published (nil-only), tidak berubah saat unpublish/republish. `content` disanitasi regexp konservatif (script/style/iframe/object/embed, atribut `on*`, URL `javascript:`/`data:`) karena belum ada library sanitizer. |
+| `MerchItem` (`merch_item`) | `name`(150), `description`, `price` int64 rupiah >=0, `image_url`, `order_url` (http/https), `category` (default `Apparel`), `is_active` (default true), `stock_status` (`ready`\|`preorder`\|`soldout`), `sort_order` | Urut tampil `sort_order ASC, id ASC`. |
+
+Endpoint publik: `GET /public/press_releases?limit=N` (published, maks 50), `GET /public/press_releases/:slug` (404 bila draft), `GET /public/merch` (hanya aktif). Admin: `/press_releases[/:id]` (`press_release.manage`) dan `/merch[/:id]` (`merch.manage`). POST/PUT menerima multipart **atau** JSON; gambar di field `cover` / `image` (JPEG/PNG/WebP via magic bytes, maks 5 MB, disimpan ke object storage); `remove_cover=true` / `remove_image=true` mengosongkan URL; PUT tanpa file mempertahankan URL lama.
+
+
+### 2.11.4 Himpunan, WorkProgram & Toggle Section Landing
+
+| Entity | Field | Catatan |
+|---|---|---|
+| `Himpunan` (`himpunan`) | `name`(150, wajib), `short_label`(60), `institution`(200), `city`(100), `address`, `email` (format valid bila diisi), `logo_url` (object storage), `is_active`, `sort_order`, `region` (SMALLINT, 0 = belum ditentukan, 1–6 = daerah; migration `20261122140000_himpunan_region.sql` + backfill per kota) | Daftar anggota landing + halaman `/anggota`. Seed awal dari `himpunanList` frontend. Upload logo di field `image`. |
+| `WorkProgram` (`work_program`) | `name`(150, wajib), `description`, `cadence`(50), `is_active`, `sort_order` | Program kerja landing. Seed awal 5 program. |
+| `OrganizationSettings.landing_sections` | TEXT JSON object | Key `about, programs, press, members, officials, merch, invitation, cta` -> bool; kosong / key hilang = tampil; hero selalu tampil. Divalidasi di `services/landing_sections.go`; ditulis HANYA lewat `PUT /landing_sections` (permission `landing.manage`; field form `landing_sections` atau body JSON berisi string/objek; hanya kolom itu yang diubah; respons = objek settings), dikembalikan `GET /settings` (publik). `PUT /settings` mengabaikan field ini. Migration `20261122120000_landing_manage_permission.sql`. |
+
+Endpoint: admin `/himpunan[/:id]` (`himpunan.manage`), `/work_programs[/:id]` (`work_program.manage`); publik `GET /public/himpunan`, `GET /public/work_programs` (hanya aktif, urut `sort_order, id`). Service: `services/himpunan.go`, `services/work_program.go`. Migration `20261122100000_himpunan_work_program.sql`.
+
+### 2.11.2 Akun Pengurus (BPW 26/27)
+
+Migrasi `20261105120000_officials_accounts.sql` mengisi 57 akun pengurus dari data formatur (sumber teks: `frontend/lib/landing/content.ts`, `officialGroups`).
+
+- **Divisi:** 7 divisi dibuat dengan warna chip kalender `division-1..7` (Pengurus Harian, PSDM, Medkominfo, IPTEK, KWU, PR, Koordinator Daerah).
+- **Role per JABATAN**, bukan per divisi: `Koordinator Wilayah`, `Wakil Koordinator Wilayah`, `Sekretaris Wilayah`, `Kepala Divisi`, `Sekretaris Divisi`, `Anggota`. Bendahara Wilayah 1 & 2 memakai role **Bendahara** yang sudah ada (`finance.*`). Divisi tetap disimpan di kolom `user.division_id`.
+- **Username** = nama di-slug-kan (`Ghani Al-Fatah` → `ghani.al.fatah`; tanda hubung & spasi jadi titik). **Email** = `<username>@permikomnasjateng.or.id`.
+- **Password awal** = `changeme123` (bcrypt cost 10), sama untuk semua akun dan **wajib diganti** pengurus.
+- Migrasi idempoten (`NOT EXISTS`), jadi aman dijalankan ulang.
+
+**Matriks permission per role:**
+
+| Role | Permission inti |
+|---|---|
+| Koordinator Wilayah | 21 permission: `events.*`, `attendance.approve`, `users.view`, `letters.manage`, `violations.manage`, `invitations.*`, `recruitment.manage`, `view.activity` |
+| Wakil Koordinator Wilayah | 15 permission: `events.*`, `attendance.approve`, `users.view`, `letters.view`, `violations.view`, `invitations.*` |
+| Sekretaris Wilayah | 17 permission: `events.*`, `users.view/create/edit/import`, `letters.manage`, `announcement.create`, `invitations.*` |
+| Kepala Divisi | 9 permission: `events.view/create/edit`, `attendance.approve_own`, `announcement.create`, `invitations.view` |
+| Sekretaris Divisi | 7 permission: `events.view/create/edit`, `attendance.submit`, `invitations.view` |
+| Anggota | 5 permission: `events.view`, `attendance.submit`, `permission.submit`, `divisions.view`, `invitations.view` |
+
+> **Jangan** mengedit migrasi ini setelah dijalankan di server — migrator mencatat nama file. Perubahan susulan pakai migrasi baru.
+
+### 2.13a EventAssignee (Peserta Event)
+
+`event_id`, `user_id`, `assigned_by_id` (*int64, `NULL` = self-assign), `UNIQUE(event_id, user_id)`.
+
+Dipisah dari `Attendance` karena penugasan adalah **keputusan administratif** (siapa yang dikirim), bukan bukti kehadiran fisik. Event hasil konversi undangan memakai tabel ini untuk mengisi "siapa saja yang ikut".
+
+Endpoint:
+
+| Endpoint | Auth | Catatan |
+|---|---|---|
+| `GET /events/:id/assignees` | `events.view` | Daftar peserta + nama/jabatan/asal himpunan |
+| `POST /events/:id/assignees` | `events.view` | Body `{user_id?}`. Tanpa `user_id` = self-assign |
+| `DELETE /events/:id/assignees/:userId` | `events.view` | Sendiri boleh; orang lain butuh kewenangan pengelola event |
+
+**Aturan penugasan:** anggota biasa hanya boleh menugaskan/mencabut **dirinya sendiri**. Menugaskan orang lain butuh kewenangan pengelola event — definisinya sama dengan syarat edit event (`CanManageEvent`: pembuat, divisi penyelenggara, atau `events.view_all`), supaya siapa pun yang boleh mengubah event juga boleh mengatur pesertanya.
+
+`GET /events/:id` sudah menyertakan `assignees` + `assignee_count`, jadi detail event tidak perlu request terpisah.
+
 ### 2.12 Keuangan (Bendahara)
 **FinanceCategory**, **FinanceTransaction** — permission `finance.*`. Endpoint summary/dashboard kustom.
 
@@ -302,6 +393,8 @@ Placeholder: `{NOMOR_SURAT}`, `{NAMA_ORGANISASI}`, … Alias legacy `{NOMOR}` / 
 | `GET /settings` | Public | Subset branding: `web_name`, `logo_url`, `icon_url`, `theme` |
 | `GET /public/recruitment/:slug` | Public | Form recruitment |
 | `POST /public/recruitment/:slug/submit` | Public | Submission tanpa login |
+| `GET /public/press_releases`, `GET /public/press_releases/:slug`, `GET /public/merch` | Public | Konten landing (§2.11.3): hanya press release published dan merch aktif. Juga `GET /public/himpunan`, `GET /public/work_programs` (§2.11.4) |
+| `POST /public/invitations` | Public | Form undangan: 3 field + lampiran PDF. Honeypot `website`, rate limit 5/jam per IP, magic bytes `%PDF-`, cap 5 MB |
 
 ## 3.1 Catatan path API vs PRD
 
@@ -352,7 +445,7 @@ function RequirePermission(ctx, code):
     return 403
 ```
 
-Permission awal: `settings.manage`, `users.view/create/edit/delete/import`, `roles.view/create/edit/delete`, `events.view/create/edit/delete`, `attendance.submit/approve/approve_own`, `divisions.view/create/edit/delete`, `permission.submit`, `permission.categories.manage`, `violations.view/manage`, `recruitment.manage`, `letters.view/manage`, `announcement.create`, `finance.view/create/edit/delete/categories/manage`, `finance.wallets.manage`, `storage.view/upload/delete/manage`.
+Permission awal: `settings.manage`, `users.view/create/edit/delete/import`, `roles.view/create/edit/delete`, `events.view/create/edit/delete`, `attendance.submit/approve/approve_own`, `divisions.view/create/edit/delete`, `permission.submit`, `permission.categories.manage`, `violations.view/manage`, `recruitment.manage`, `letters.view/manage`, `invitations.view/manage`, `press_release.manage`, `merch.manage`, `himpunan.manage`, `work_program.manage`, `landing.manage`, `announcement.create`, `finance.view/create/edit/delete/categories/manage`, `finance.wallets.manage`, `storage.view/upload/delete/manage`.
 
 **Approval izin dua tingkat:** `attendance.approve` = semua event (Admin, PH); `attendance.approve_own` = hanya event yang dikelola (pembuat atau divisi penyelenggara). Seed menyebarkannya otomatis: pemegang `events.create` (PH/Kadiv/Sekdiv/KOORDA) mendapat `approve_own`, pemegang `attendance.approve` mendapat `permission.categories.manage`.
 
@@ -436,6 +529,7 @@ Parse CSV/XLSX → validasi → bulk insert → email async.
 ### 6.9 Auth
 - Password: bcrypt.
 - Login sukses: terbitkan JWT; set cookie httpOnly `token` + kembalikan `token` di body (PRD §5.1).
+- Frontend (sesi): browser login lewat route handler Next `POST /api/session/{login,register,logout}` → backend `/auth/*` server-side; route handler set cookie `token` **HttpOnly, SameSite=Lax, Path=/, 7 hari, Secure di production** di origin Next dan **membuang `token` dari JSON** ke browser. JS tidak menyimpan token (tanpa localStorage / `document.cookie`); status login = `GET /me`. `proxy.ts` untuk `/api/backend/*`: tolak write lintas-origin (403 `origin tidak valid`) dan suntik `Authorization: Bearer <cookie>` (override header proxy diterapkan sebelum rewrite eksternal). Lihat `frontend/DESIGN.md` §Auth.
 - Middleware/global hook: baca cookie atau `Authorization: Bearer`.
 - Rate-limit `/auth/login` dan `/public/recruitment/*` (implementasi proyek; Redis opsional).
 

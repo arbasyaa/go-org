@@ -4,7 +4,6 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useSettings } from "@/hooks/use-settings"
@@ -18,46 +17,20 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { hasPermission } from "@/lib/auth"
+import { filterNav, findActiveUrl, portalNav } from "@/lib/nav-config"
 import { storageUrl } from "@/lib/storage-url"
-import type { NavItem } from "@/lib/types"
 
-function filterNavItems(items: NavItem[], permissions: string[]): NavItem[] {
-  return items
-    .filter((item) => hasPermission(permissions, item.permission))
-    .map((item) => ({
-      ...item,
-      items: item.items?.filter((sub) =>
-        hasPermission(permissions, sub.permission)
-      ),
-    }))
-    .filter((item) => !item.items || item.items.length > 0)
-}
-
-export function AppSidebar({
-  navItems,
-  secondaryItems = [],
-  menuVariant = "member",
-  ...props
-}: Omit<React.ComponentProps<typeof Sidebar>, "variant"> & {
-  navItems: NavItem[]
-  secondaryItems?: NavItem[]
-  menuVariant?: "member" | "admin"
-}) {
+export function AppSidebar(
+  props: Omit<React.ComponentProps<typeof Sidebar>, "variant">
+) {
   const pathname = usePathname()
-  const { user, permissions } = useAuth()
+  const { user, hasPermission } = useAuth()
   const { settings } = useSettings()
   const siteName = settings?.web_name || DEFAULT_SITE_NAME
   const logoUrl = settings?.logo_url ? storageUrl(settings.logo_url) : DEFAULT_LOGO_URL
 
-  const filteredMain = filterNavItems(navItems, permissions)
-  const filteredSecondary = filterNavItems(secondaryItems, permissions)
-
-  const navWithActive = filteredMain.map((item) => ({
-    ...item,
-    isActive:
-      pathname === item.url || pathname.startsWith(`${item.url}/`),
-  }))
+  const groups = filterNav(portalNav, hasPermission)
+  const activeUrl = findActiveUrl(groups, pathname)
 
   return (
     <Sidebar variant="inset" {...props}>
@@ -66,13 +39,7 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              render={
-                <Link
-                  href={
-                    menuVariant === "admin" ? "/admin/dashboard" : "/dashboard"
-                  }
-                />
-              }
+              render={<Link href="/" />}
             >
               <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg bg-background ring-1 ring-sidebar-border">
                 <img
@@ -83,19 +50,14 @@ export function AppSidebar({
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{siteName}</span>
-                <span className="truncate text-xs">
-                  {menuVariant === "admin" ? "Panel Admin" : "Anggota"}
-                </span>
+                <span className="truncate text-xs">Portal Pengurus</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navWithActive} />
-        {filteredSecondary.length > 0 ? (
-          <NavSecondary items={filteredSecondary} className="mt-auto" />
-        ) : null}
+        <NavMain groups={groups} activeUrl={activeUrl} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser

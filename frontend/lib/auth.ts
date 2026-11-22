@@ -1,44 +1,52 @@
-import { apiRequest } from "@/lib/api"
-import type { LoginResponse, User } from "@/lib/types"
+import { ApiError, apiRequest } from "@/lib/api"
+import { normalizeApiData } from "@/lib/format"
+import type { ApiEnvelope, LoginResponse, User } from "@/lib/types"
 
-const TOKEN_KEY = "myorg_token"
-const COOKIE_MAX_AGE = 7 * 24 * 60 * 60
+/**
+ * Sesi = cookie HttpOnly `token` di origin Next, di-set oleh route handler
+ * `/api/session/*`. JS tidak pernah membaca/menyimpan token; status login
+ * diturunkan dari `GET /me`.
+ */
+const LEGACY_TOKEN_KEY = "myorg_token"
 
-let memoryToken: string | null = null
-
-/** Cookie on the Next.js origin — required by middleware (localStorage is invisible there). */
-function setClientAuthCookie(token: string | null) {
-  if (typeof document === "undefined") return
-  if (token) {
-    document.cookie = `token=${encodeURIComponent(token)}; Path=/; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}`
-  } else {
-    document.cookie = "token=; Path=/; SameSite=Lax; Max-Age=0"
-  }
-}
-
-export function getStoredToken(): string | null {
-  if (typeof window === "undefined") return memoryToken
-  return memoryToken ?? localStorage.getItem(TOKEN_KEY)
-}
-
-export function setStoredToken(token: string | null) {
-  memoryToken = token
+/** Hapus token sisa versi lama dari localStorage (cookie `token` lama yang
+ * non-HttpOnly ditimpa oleh Set-Cookie HttpOnly saat login/logout). */
+export function clearLegacyToken() {
   if (typeof window === "undefined") return
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token)
-  } else {
-    localStorage.removeItem(TOKEN_KEY)
+  try {
+    localStorage.removeItem(LEGACY_TOKEN_KEY)
+  } catch {
+    /* storage diblokir */
   }
-  setClientAuthCookie(token)
 }
 
-export async function login(username: string, password: string) {
-  const data = await apiRequest<LoginResponse>("/auth/login", {
+async function sessionRequest<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`/api/session/${path}`, {
     method: "POST",
-    body: { username, password },
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   })
-  if (data.token) setStoredToken(data.token)
-  return data
+  let envelope: ApiEnvelope<T>
+  try {
+    envelope = (await res.json()) as ApiEnvelope<T>
+  } catch {
+    throw new ApiError(res.statusText || "Request failed", res.status)
+  }
+  if (!res.ok || envelope.success === false) {
+    throw new ApiError(
+      envelope.message || "Request failed",
+      res.status,
+      envelope.errors
+    )
+  }
+  return normalizeApiData(envelope.data) as T
+}
+
+/** Respons tidak lagi memuat `token` (tetap di cookie HttpOnly). */
+export async function login(username: string, password: string) {
+  clearLegacyToken()
+  return sessionRequest<LoginResponse>("login", { username, password })
 }
 
 export async function register(payload: {
@@ -47,22 +55,18 @@ export async function register(payload: {
   password: string
   full_name: string
 }) {
-  const data = await apiRequest<LoginResponse>("/auth/register", {
-    method: "POST",
-    body: payload,
-  })
-  if (data.token) setStoredToken(data.token)
-  return data
+  clearLegacyToken()
+  return sessionRequest<LoginResponse>("register", payload)
 }
 
 export async function logout() {
+  clearLegacyToken()
   try {
-    await apiRequest("/auth/logout", { method: "POST" })
-  } finally {
-    setStoredToken(null)
+    await sessionRequest("logout")
+  } catch {
+    /* cookie tetap dihapus server bila request sampai */
   }
 }
-
 export async function getMe() {
   return apiRequest<User>("/me")
 }

@@ -16,7 +16,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { formatDate } from "@/lib/format"
+import { formatDate, formatDateOnly } from "@/lib/format"
 import { FADE_IN, fadeInDelay } from "@/lib/motion"
 import { eventBannerUrl } from "@/lib/event-banner"
 import { cn } from "@/lib/utils"
@@ -165,7 +165,9 @@ export function EventsView({
                     <div className="mt-auto flex flex-col gap-1 pt-2 text-xs text-muted-foreground">
                       <p className="flex items-center gap-1.5">
                         <CalendarIcon className="size-3.5" />
-                        {formatDate(event.start_time)}
+                        {event.all_day
+                          ? `${formatDateOnly(event.start_time)} · sepanjang hari`
+                          : formatDate(event.start_time)}
                       </p>
                       <p className="flex items-center gap-1.5">
                         <MapPinIcon className="size-3.5" />

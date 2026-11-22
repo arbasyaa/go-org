@@ -81,6 +81,25 @@ export function formatDate(value?: string | null) {
   }
 }
 
+/**
+ * Tanggal saja (tanpa jam) — untuk nilai yang memang hanya berisi tanggal,
+ * mis. tanggal acara undangan atau event `all_day`.
+ *
+ * Sengaja TIDAK dipatok ke UTC: backend menyimpan tanggal sebagai tengah malam
+ * WIB (bukan UTC), jadi memformat dalam UTC justru memundurkannya sehari.
+ * Format di zona waktu pengguna, sama seperti tanggal lain di aplikasi ini.
+ */
+export function formatDateOnly(value?: string | null) {
+  if (!value) return "-"
+  try {
+    return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(
+      new Date(value)
+    )
+  } catch {
+    return value
+  }
+}
+
 export function formatCurrency(value?: number | null) {
   if (value == null) return "-"
   return new Intl.NumberFormat("id-ID", {

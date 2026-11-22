@@ -6,6 +6,9 @@ import {
   ArrowLeftIcon,
   CalendarIcon,
   MapPinIcon,
+  UserCheckIcon,
+  UserPlusIcon,
+  UsersIcon,
 } from "lucide-react"
 import { IzinRequestDialog } from "@/components/member/izin-request-dialog"
 import { FEATURES } from "@/lib/features"
@@ -15,7 +18,9 @@ import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
-import { formatDate } from "@/lib/format"
+import { useAuth } from "@/components/providers/auth-provider"
+import { toast } from "sonner"
+import { formatDate, formatDateOnly } from "@/lib/format"
 import { eventBannerUrl } from "@/lib/event-banner"
 import {
   isPermissionClosed,
@@ -51,6 +56,9 @@ export default function EventDetailPage({
     [id]
   )
   const [izinOpen, setIzinOpen] = useState(false)
+  const [assignBusy, setAssignBusy] = useState(false)
+  const { user } = useAuth()
+  const myId = user?.id
   const banner = event ? eventBannerUrl(event) : null
   const organizer = event ? eventOrganizerName(event) : null
 
@@ -76,6 +84,36 @@ export default function EventDetailPage({
     (event?.status === "upcoming" || event?.status === "ongoing") &&
     event?.my_permission_request_status !== "pending" &&
     event?.my_permission_request_status !== "approved"
+
+  const assignees = event?.assignees ?? []
+  const assignedMe = assignees.some((a) => a.user_id === myId)
+
+  async function joinAsAssignee() {
+    setAssignBusy(true)
+    try {
+      await apiRequest(`/events/${id}/assignees`, { method: "POST", body: {} })
+      toast.success("Anda tercatat sebagai peserta yang berangkat")
+      refetch()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mencatat peserta")
+    } finally {
+      setAssignBusy(false)
+    }
+  }
+
+  async function leaveAssignee() {
+    if (!myId) return
+    setAssignBusy(true)
+    try {
+      await apiRequest(`/events/${id}/assignees/${myId}`, { method: "DELETE" })
+      toast.success("Anda dikeluarkan dari daftar peserta")
+      refetch()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mencabut peserta")
+    } finally {
+      setAssignBusy(false)
+    }
+  }
 
   return (
     <>
@@ -141,21 +179,29 @@ export default function EventDetailPage({
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
+                {/* Event all-day (mis. hasil undangan) hanya punya tanggal:
+                    jangan tampilkan jam, karena jamnya bukan informasi nyata. */}
                 <div className="rounded-xl bg-muted/50 px-4 py-3 text-sm">
                   <p className="flex items-center gap-2 text-muted-foreground">
                     <CalendarIcon className="size-4" />
-                    Mulai
+                    {event.all_day ? "Tanggal" : "Mulai"}
                   </p>
                   <p className="mt-1 font-medium">
-                    {formatDate(event.start_time)}
+                    {event.all_day
+                      ? formatDateOnly(event.start_time)
+                      : formatDate(event.start_time)}
                   </p>
                 </div>
                 <div className="rounded-xl bg-muted/50 px-4 py-3 text-sm">
                   <p className="flex items-center gap-2 text-muted-foreground">
                     <CalendarIcon className="size-4" />
-                    Selesai
+                    {event.all_day ? "Keterangan" : "Selesai"}
                   </p>
-                  <p className="mt-1 font-medium">{formatDate(event.end_time)}</p>
+                  <p className="mt-1 font-medium">
+                    {event.all_day
+                      ? "Sepanjang hari"
+                      : formatDate(event.end_time)}
+                  </p>
                 </div>
                 <div className="rounded-xl bg-muted/50 px-4 py-3 text-sm sm:col-span-2">
                   <p className="flex items-center gap-2 text-muted-foreground">
@@ -176,6 +222,77 @@ export default function EventDetailPage({
               </div>
 
               {event.link_url ? <EventJoinButton event={event} /> : null}
+
+              {/* Daftar peserta: siapa saja yang ditugaskan berangkat.
+                  Muncul untuk semua event, tapi paling relevan untuk event
+                  hasil konversi undangan. */}
+              <div className="rounded-xl border px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    <UsersIcon className="size-4 text-muted-foreground" />
+                    Peserta yang berangkat
+                    <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-normal text-secondary-foreground">
+                      {assignees.length}
+                    </span>
+                  </p>
+                  {assignedMe ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={assignBusy}
+                      onClick={leaveAssignee}
+                    >
+                      <UserCheckIcon data-icon="inline-start" />
+                      Batalkan keikutsertaan
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={assignBusy}
+                      onClick={joinAsAssignee}
+                    >
+                      <UserPlusIcon data-icon="inline-start" />
+                      Saya ikut
+                    </Button>
+                  )}
+                </div>
+
+                {assignees.length === 0 ? (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    Belum ada yang ditugaskan untuk event ini.
+                  </p>
+                ) : (
+                  <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {assignees.map((a) => (
+                      <li
+                        key={a.id}
+                        className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+                        >
+                          {initials(a.full_name ?? a.username ?? "?")}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">
+                            {a.full_name ?? a.username ?? `User #${a.user_id}`}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {[
+                              a.jabatan,
+                              a.asal_himpunan,
+                              a.self_assigned ? "mendaftar sendiri" : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ") || "—"}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
               {FEATURES.attendance || event.my_permission_request_status ? (
                 <div className="rounded-xl border px-4 py-3 text-sm">
@@ -251,4 +368,14 @@ export default function EventDetailPage({
       />
     </>
   )
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
 }

@@ -1,191 +1,301 @@
 import {
-  ActivityIcon,
-  BellIcon,
-  Building2Icon,
   CalendarIcon,
   ClipboardListIcon,
-  CloudIcon,
-  DatabaseBackupIcon,
-  FileTextIcon,
+  GlobeIcon,
+  InboxIcon,
   LayoutDashboardIcon,
-  LayoutPanelLeftIcon,
   MailIcon,
   MegaphoneIcon,
   SettingsIcon,
   ShieldAlertIcon,
   ShieldIcon,
   UsersIcon,
-  WalletIcon,
 } from "lucide-react"
 import { FEATURES } from "@/lib/features"
-import type { NavItem } from "@/lib/types"
+import type { NavGroup, NavItem, NavSubItem } from "@/lib/types"
 
-export const memberNavItems: NavItem[] = [
+/**
+ * Satu navigasi untuk seluruh Portal Pengurus. Semua item difilter RBAC lewat
+ * `filterNav` — pengurus biasa hanya melihat item personal, admin melihat
+ * item pengelolaan sesuai permission-nya. Profil sengaja tidak ada di sini:
+ * aksesnya lewat menu pengguna di kiri bawah (nav-user.tsx).
+ *
+ * Url induk (item dengan `items`) = url sub-item pertama; dipakai saat induk
+ * diratakan menjadi tautan langsung.
+ */
+export const portalNav: NavGroup[] = [
   {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: <LayoutDashboardIcon className="size-4" />,
-  },
-  // Profil sengaja tidak ada di sini: aksesnya lewat menu pengguna di kiri
-  // bawah (di atas "Keluar") supaya sidebar tidak dobel — lihat nav-user.tsx.
-  {
-    title: "Anggota",
-    url: "/members",
-    icon: <UsersIcon className="size-4" />,
-  },
-  {
-    title: "Event",
-    url: "/events",
-    icon: <CalendarIcon className="size-4" />,
-    permission: "events.view",
-  },
-  {
-    title: "Perizinan Saya",
-    url: "/my-permissions",
-    icon: <ClipboardListIcon className="size-4" />,
-    permission: "permission.submit",
-  },
-  {
-    title: "Pelanggaran Saya",
-    url: "/my-violations",
-    icon: <ShieldAlertIcon className="size-4" />,
-  },
-  {
-    title: "Pengumuman",
-    url: "/announcements",
-    icon: <MegaphoneIcon className="size-4" />,
-  },
-]
-
-export const adminNavItems: NavItem[] = [
-  {
-    title: "Dashboard",
-    url: "/admin/dashboard",
-    icon: <LayoutDashboardIcon className="size-4" />,
-  },
-  {
-    title: "Pengaturan",
-    url: "/admin/settings",
-    icon: <SettingsIcon className="size-4" />,
-    permission: "settings.manage",
-  },
-  {
-    title: "Backup",
-    url: "/admin/backup",
-    icon: <DatabaseBackupIcon className="size-4" />,
-    permission: "backup.manage",
-  },
-  {
-    title: "Pengguna",
-    url: "/admin/users",
-    icon: <UsersIcon className="size-4" />,
-    permission: "users.view",
-  },
-  {
-    title: "Role & Akses",
-    url: "/admin/roles",
-    icon: <ShieldIcon className="size-4" />,
-    permission: "roles.view",
-  },
-  {
-    title: "Divisi",
-    url: "/admin/divisions",
-    icon: <Building2Icon className="size-4" />,
-    permission: "divisions.view",
-  },
-  {
-    title: "Event",
-    url: "/admin/events",
-    icon: <CalendarIcon className="size-4" />,
-    permission: "events.view",
-  },
-  {
-    title: "Approval Perizinan",
-    url: "/admin/permissions",
-    icon: <BellIcon className="size-4" />,
-    // Kadiv/Sekdiv memegang approve_own: menyetujui izin event yang mereka buat/kelola.
-    permission: ["attendance.approve", "attendance.approve_own"],
     items: [
-      { title: "Pengajuan Izin", url: "/admin/permissions" },
       {
-        title: "Kategori Izin",
-        url: "/admin/permissions/categories",
-        permission: "permission.categories.manage",
+        title: "Dashboard",
+        url: "/dashboard",
+        icon: <LayoutDashboardIcon className="size-4" />,
       },
     ],
   },
   {
-    title: "Pelanggaran & SP",
-    url: "/admin/violations",
-    icon: <ClipboardListIcon className="size-4" />,
-    permission: "violations.view",
-  },
-  {
-    title: "Surat",
-    url: "/admin/letters/incoming",
-    icon: <MailIcon className="size-4" />,
-    permission: "letters.view",
+    label: "Kegiatan",
     items: [
-      { title: "Surat Masuk", url: "/admin/letters/incoming" },
-      { title: "Surat Keluar", url: "/admin/letters/outgoing" },
-      { title: "Kategori Surat", url: "/admin/letters/categories", permission: "letters.manage" },
-      { title: "Template Surat", url: "/admin/letters/templates", permission: "letters.manage" },
+      {
+        title: "Event",
+        url: "/events",
+        icon: <CalendarIcon className="size-4" />,
+        items: [
+          { title: "Jadwal & Absensi", url: "/events", permission: "events.view" },
+          {
+            title: "Kelola Event",
+            url: "/admin/events",
+            permission: "events.create",
+          },
+        ],
+      },
+      // Cukup login: anggota perlu melihat undangan untuk menugaskan dirinya
+      // sendiri; assign orang lain tetap digerbangi invitations.manage.
+      {
+        title: "Undangan Masuk",
+        url: "/invitations",
+        icon: <InboxIcon className="size-4" />,
+      },
+      // Rekrutmen belum ada: /admin/recruitments hanya redirect (modul dihapus).
     ],
   },
   {
-    title: "Pengumuman",
-    url: "/admin/announcements",
-    icon: <MegaphoneIcon className="size-4" />,
-    permission: "announcement.create",
+    label: "Kehadiran & Disiplin",
+    items: [
+      {
+        title: "Perizinan",
+        url: "/my-permissions",
+        icon: <ClipboardListIcon className="size-4" />,
+        items: [
+          {
+            title: "Perizinan Saya",
+            url: "/my-permissions",
+            permission: "permission.submit",
+          },
+          {
+            title: "Approval Izin",
+            url: "/admin/permissions",
+            // Kadiv/Sekdiv memegang approve_own: menyetujui izin event yang mereka buat/kelola.
+            permission: ["attendance.approve", "attendance.approve_own"],
+          },
+          {
+            title: "Kategori Izin",
+            url: "/admin/permissions/categories",
+            permission: "permission.categories.manage",
+          },
+        ],
+      },
+      {
+        title: "Pelanggaran",
+        url: "/my-violations",
+        icon: <ShieldAlertIcon className="size-4" />,
+        items: [
+          { title: "Pelanggaran Saya", url: "/my-violations" },
+          {
+            title: "Pelanggaran & SP",
+            url: "/admin/violations",
+            permission: "violations.view",
+          },
+        ],
+      },
+    ],
   },
-  // Keuangan sedang dimatikan (lib/features.ts) — itemnya ikut hilang dari
-  // sidebar, tapi halaman, tabel, dan datanya tetap utuh.
-  ...(FEATURES.finance
-    ? [
-        {
-          title: "Keuangan",
-          url: "/admin/finance",
-          icon: <WalletIcon className="size-4" />,
-          permission: "finance.view",
-        },
-      ]
-    : []),
   {
-    title: "Penyimpanan Cloud",
-    url: "/admin/storage",
-    icon: <CloudIcon className="size-4" />,
-    permission: "storage.view",
+    label: "Komunikasi",
+    items: [
+      {
+        title: "Pengumuman",
+        url: "/announcements",
+        icon: <MegaphoneIcon className="size-4" />,
+        items: [
+          { title: "Lihat Pengumuman", url: "/announcements" },
+          {
+            title: "Kelola Pengumuman",
+            url: "/admin/announcements",
+            permission: "announcement.create",
+          },
+        ],
+      },
+      {
+        title: "Surat",
+        url: "/admin/letters/incoming",
+        icon: <MailIcon className="size-4" />,
+        items: [
+          {
+            title: "Surat Masuk",
+            url: "/admin/letters/incoming",
+            permission: "letters.view",
+          },
+          {
+            title: "Surat Keluar",
+            url: "/admin/letters/outgoing",
+            permission: "letters.view",
+          },
+          {
+            title: "Kategori Surat",
+            url: "/admin/letters/categories",
+            permission: "letters.manage",
+          },
+          {
+            title: "Template Surat",
+            url: "/admin/letters/templates",
+            permission: "letters.manage",
+          },
+        ],
+      },
+    ],
   },
   {
-    title: "Log Aktivitas",
-    url: "/admin/activity",
-    icon: <ActivityIcon className="size-4" />,
-    permission: "view.activity",
+    label: "Organisasi",
+    items: [
+      {
+        title: "Direktori Pengurus",
+        url: "/members",
+        icon: <UsersIcon className="size-4" />,
+      },
+      {
+        title: "Akun & Akses",
+        url: "/admin/users",
+        icon: <ShieldIcon className="size-4" />,
+        items: [
+          { title: "Pengguna", url: "/admin/users", permission: "users.view" },
+          { title: "Role & Akses", url: "/admin/roles", permission: "roles.view" },
+          {
+            title: "Divisi",
+            url: "/admin/divisions",
+            permission: "divisions.view",
+          },
+        ],
+      },
+    ],
   },
-]
-
-export const adminSecondaryNav: NavItem[] = [
   {
-    title: "Panel Anggota",
-    url: "/dashboard",
-    icon: <LayoutPanelLeftIcon className="size-4" />,
-  },
-]
-
-export const memberSecondaryNav: NavItem[] = [
-  {
-    title: "Panel Admin",
-    url: "/admin/dashboard",
-    icon: <FileTextIcon className="size-4" />,
-    permission: [
-      "settings.manage",
-      "users.view",
-      "roles.view",
-      "events.create",
-      "letters.view",
-      "finance.view",
-      "storage.view",
-      "backup.manage",
+    label: "Kelola",
+    items: [
+      {
+        title: "Website Publik",
+        url: "/admin/press-releases",
+        icon: <GlobeIcon className="size-4" />,
+        items: [
+          {
+            title: "Berita",
+            url: "/admin/press-releases",
+            permission: "press_release.manage",
+          },
+          { title: "Merch", url: "/admin/merch", permission: "merch.manage" },
+          {
+            title: "Himpunan",
+            url: "/admin/himpunan",
+            permission: "himpunan.manage",
+          },
+          {
+            title: "Program Kerja",
+            url: "/admin/work-programs",
+            permission: "work_program.manage",
+          },
+          {
+            title: "Tampilan Landing",
+            url: "/admin/landing",
+            permission: "landing.manage",
+          },
+        ],
+      },
+      {
+        title: "Sistem",
+        url: "/admin/settings",
+        icon: <SettingsIcon className="size-4" />,
+        items: [
+          {
+            title: "Pengaturan",
+            url: "/admin/settings",
+            permission: "settings.manage",
+          },
+          {
+            title: "Penyimpanan Cloud",
+            url: "/admin/storage",
+            permission: "storage.view",
+          },
+          {
+            title: "Backup",
+            url: "/admin/backup",
+            permission: "backup.manage",
+          },
+          {
+            title: "Log Aktivitas",
+            url: "/admin/activity",
+            permission: "view.activity",
+          },
+          // Keuangan sedang dimatikan (lib/features.ts) — itemnya ikut hilang
+          // dari sidebar, tapi halaman, tabel, dan datanya tetap utuh.
+          ...(FEATURES.finance
+            ? [
+                {
+                  title: "Keuangan",
+                  url: "/admin/finance",
+                  permission: "finance.view",
+                },
+              ]
+            : []),
+        ],
+      },
     ],
   },
 ]
+
+/**
+ * Terapkan RBAC ke navigasi:
+ *  a) item/sub-item dengan `permission` disembunyikan jika user tidak punya;
+ *  b) induk yang semua sub-itemnya tersembunyi ikut disembunyikan;
+ *  c) induk dengan tepat SATU sub-item terlihat diratakan menjadi tautan
+ *     langsung ke url sub-item itu (judul + ikon induk dipertahankan);
+ *  d) grup tanpa item terlihat disembunyikan.
+ */
+export function filterNav(
+  groups: NavGroup[],
+  hasPermission: (required?: string | string[]) => boolean
+): NavGroup[] {
+  const result: NavGroup[] = []
+  for (const group of groups) {
+    const items: NavItem[] = []
+    for (const item of group.items) {
+      if (!hasPermission(item.permission)) continue
+      if (!item.items) {
+        items.push(item)
+        continue
+      }
+      const subs = item.items.filter((sub) => hasPermission(sub.permission))
+      if (subs.length === 0) continue
+      if (subs.length === 1) {
+        // Judul sub-menu dipakai (bukan judul induk): "Akun & Akses" yang
+        // isinya hanya Divisi tampil sebagai "Divisi", tidak menyesatkan.
+        items.push({ title: subs[0].title, icon: item.icon, url: subs[0].url })
+        continue
+      }
+      items.push({ ...item, items: subs })
+    }
+    if (items.length > 0) result.push({ ...group, items })
+  }
+  return result
+}
+
+/**
+ * Url nav yang aktif untuk `pathname`: longest-prefix match di seluruh url
+ * (induk maupun sub-item), mis. /admin/events/12/edit -> "/admin/events".
+ */
+export function findActiveUrl(
+  groups: NavGroup[],
+  pathname: string
+): string | null {
+  let best: string | null = null
+  const consider = (url: string) => {
+    if (pathname !== url && !pathname.startsWith(`${url}/`)) return
+    if (best === null || url.length > best.length) best = url
+  }
+  for (const group of groups) {
+    for (const item of group.items) {
+      consider(item.url)
+      item.items?.forEach((sub: NavSubItem) => consider(sub.url))
+    }
+  }
+  return best
+}

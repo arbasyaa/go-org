@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import {
   getMe,
   getPermissions,
-  getStoredToken,
+  clearLegacyToken,
   logout as authLogout,
 } from "@/lib/auth"
 import type { User } from "@/lib/types"
@@ -26,12 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
-    if (!getStoredToken()) {
-      setUser(null)
-      setPermissions([])
-      setLoading(false)
-      return
-    }
+    // Cookie HttpOnly tak terbaca JS: status login = hasil GET /me (401 → null).
     try {
       // GET /me sudah menyertakan permissions; fallback ke /me/permissions
       // kalau backend lama (satu request lebih hemat per load).
@@ -47,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    clearLegacyToken()
     queueMicrotask(() => {
       void refresh()
     })

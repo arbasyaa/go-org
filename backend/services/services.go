@@ -644,6 +644,11 @@ func (EventService) GetForUser(ctx context.Context, id int64, user *auth.User, c
 		Filter("event_id", id).Filter("user_id", user.ID).OrderBy("-id").First(); err == nil && pr != nil {
 		out["my_permission_request_status"] = pr.Status
 	}
+	// Daftar peserta (siapa yang berangkat) ikut di detail event supaya UI
+	// tidak perlu request terpisah.
+	if err := withAssignees(ctx, e.ID, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

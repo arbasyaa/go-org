@@ -28,7 +28,6 @@ import {
 } from "@/components/incoming-letter-preview"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest, getApiBase } from "@/lib/api"
-import { getStoredToken } from "@/lib/auth"
 import { formatDate, unwrapList } from "@/lib/format"
 import { storageUrl } from "@/lib/storage-url"
 import {
@@ -407,11 +406,9 @@ export function LettersTablePage({ letterType }: LettersTablePageProps) {
   }
 
   async function handleExport() {
-    const token = getStoredToken()
     const url = `${getApiBase()}/letters?export=csv&type=${letterType}`
     const res = await fetch(url, {
       credentials: "include",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
     if (!res.ok) {
       toast.error("Gagal export")

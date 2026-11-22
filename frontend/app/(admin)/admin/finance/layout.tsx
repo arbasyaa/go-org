@@ -27,7 +27,7 @@ export default function FinanceLayout({
       <PageHeader
         title="Keuangan"
         crumbs={[
-          { label: "Admin", href: "/admin/dashboard" },
+          { label: "Admin", href: "/dashboard" },
           { label: "Keuangan" },
         ]}
       />
@@ -42,7 +42,7 @@ export default function FinanceLayout({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button variant="outline" render={<Link href="/admin/dashboard" />}>
+            <Button variant="outline" render={<Link href="/dashboard" />}>
               Kembali ke dasbor
             </Button>
           </CardContent>
