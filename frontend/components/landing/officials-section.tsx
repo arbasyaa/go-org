@@ -45,7 +45,7 @@ export function OfficialsSection() {
             <SectionTitle id="pengurus-title" text="Orang-orang di balik gerakan." className="mt-6 max-w-[14ch]" accentLast />
           </div>
           <p data-reveal className="max-w-[38ch] font-[family-name:var(--font-landing-body)] text-base leading-relaxed text-[var(--landing-ink-muted)] md:col-span-4">
-            Formatur BPW periode 2026/2027, dipilih dari dan oleh himpunan anggota. Pilih divisi untuk melihat susunannya.
+            BPW periode 2026/2027, dipilih dari dan oleh himpunan anggota. Pilih divisi untuk melihat susunannya.
           </p>
         </div>
 
