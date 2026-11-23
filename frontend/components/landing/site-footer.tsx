@@ -67,6 +67,27 @@ export function SiteFooter({ navLinks = allNavLinks }: { navLinks?: readonly Nav
             </ul>
           </div>
         </div>
+
+        {/* Kredit: disebut apa adanya — siapa yang membangun, siapa yang memulai. */}
+        <div
+          data-reveal
+          className="mt-14 grid gap-4 border-t border-[var(--landing-on-ink)]/15 pt-8 md:grid-cols-12 md:items-start"
+        >
+          <h2 className="font-[family-name:var(--font-landing-label)] text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--landing-on-ink-dim)] md:col-span-3">
+            {org.credits.title}
+          </h2>
+          <div className="md:col-span-9">
+            <p className="font-[family-name:var(--font-landing-body)] text-sm leading-relaxed text-[var(--landing-on-ink)]">
+              Dibuat oleh <span className="font-semibold">{org.credits.builder}</span>.
+            </p>
+            <p className="mt-2 font-[family-name:var(--font-landing-body)] text-sm leading-relaxed text-[var(--landing-on-ink-dim)]">
+              Terima kasih khusus kepada <span className="font-semibold text-[var(--landing-on-ink)]">{org.credits.thanks}</span>, {org.credits.thanksRole}.
+            </p>
+            <p className="mt-3 max-w-[62ch] font-[family-name:var(--font-landing-body)] text-xs leading-relaxed text-[var(--landing-on-ink-dim)]">
+              {org.credits.story}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div data-wordmark aria-hidden className="mt-16 overflow-hidden px-2 md:mt-24">

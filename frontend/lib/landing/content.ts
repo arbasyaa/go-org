@@ -8,10 +8,19 @@ export const org = {
   fullName:
     "Perhimpunan Mahasiswa Informatika dan Komputer Nasional",
   region: "Wilayah VII Jawa Tengah",
-  email: "sekretaris@permikomnasjateng.or.id",
+  email: "permikomnasjateng7@gmail.com",
   address: "Semarang, Jawa Tengah, Indonesia",
   description:
     "Perhimpunan Mahasiswa Informatika dan Komputer Nasional Wilayah VII Jawa Tengah menghimpun himpunan mahasiswa informatika dan komputer dari berbagai kampus di Jawa Tengah untuk memajukan teknologi dan menjadi garda terdepan perkembangan teknologi di Jawa Tengah.",
+  /** Kredit pembuat situs; tampil di footer. */
+  credits: {
+    title: "Kredit",
+    builder: "Tim IT Permikomnas Jawa Tengah",
+    thanks: "Hafiz Agha Al-Baith",
+    thanksRole: "Sekretaris Umum HIMATRIS PNC",
+    story:
+      "Situs ini lahir dari repositori yang awalnya dibangun dan dibagikan Hafiz Agha Al-Baith. Kerangkanya kami rawat, isinya kami ganti, dan tampilannya kami sesuaikan untuk kebutuhan Permikomnas Jawa Tengah. Terima kasih sudah membuka jalan.",
+  },
 } as const
 
 export type LandingSectionKey =
