@@ -16,10 +16,12 @@
 #
 # Lokal: cp .env.example .env && docker compose -f docker-compose.prod.yml up -d --build
 #
-# MIGRASI SKEMA — MANUAL, tidak otomatis saat boot.
-# Deploy tidak pernah mengubah skema tanpa disengaja. Jalankan sendiri:
+# MIGRASI SKEMA — OTOMATIS saat boot (RUN_MIGRATIONS=1 di service gokilbgt).
+# Migrasi tetap hanya dari file di backend/migrations/ — entrypoint tidak pernah
+# menjalankan makemigrations, jadi skema tidak pernah berubah tanpa file migrasi.
+# Untuk mematikan lagi: hapus RUN_MIGRATIONS dari environment gokilbgt.
+# Menjalankan manual (mis. saat rollback):
 #   docker compose -f docker-compose.prod.yml run --rm gokilbgt /app/app migrate
-# Untuk mengaktifkan lagi otomatis, set RUN_MIGRATIONS=1 di environment.
 # =============================================================================
 
 services:
@@ -71,6 +73,8 @@ services:
       # Satu-satunya tempat password DB hidup. Menimpa apa pun di .env.
       GOKIL_DB_DSN: postgres://${GOKIL_DB_USER}:${GOKIL_DB_PASSWORD}@db:5432/${GOKIL_DB_NAME}?sslmode=disable
       OCR_SERVICE_URL: http://ocr:8090
+      # Migrasi dijalankan entrypoint sebelum `serve`. Lihat catatan di kepala file.
+      RUN_MIGRATIONS: "1"
     env_file:
       - .env
     expose:
