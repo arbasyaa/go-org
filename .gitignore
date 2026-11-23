@@ -57,4 +57,6 @@ coverage/
 
 # Dokumen internal: data pribadi anggota (mis. xlsx formatur) & daftar kredensial
 # akun. Jangan pernah di-commit.
-/docs/
+/docs/*
+# Kecuali dokumen desain: itu untuk dibaca builder, aman di-commit.
+!/docs/superpowers/
