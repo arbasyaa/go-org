@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -111,6 +112,7 @@ func userPayload(ctx context.Context, u *models.User) map[string]any {
 		"division_id": u.DivisionID, "role_id": u.RoleID, "status": u.Status,
 		"hometown": u.Hometown, "phone": u.Phone,
 		"jabatan": u.Jabatan, "asal_himpunan": u.AsalHimpunan,
+		"himpunan_id": u.HimpunanID,
 	}
 	if u.BirthDate != nil {
 		out["birth_date"] = u.BirthDate.Format("2006-01-02")
@@ -121,7 +123,32 @@ func userPayload(ctx context.Context, u *models.User) map[string]any {
 	if div, err := orm.GetByID[models.Division](ctx, u.DivisionID); err == nil {
 		out["division"] = div.Name
 	}
+	if name := himpunanName(ctx, u); name != "" {
+		out["himpunan"] = name
+	}
 	return out
+}
+
+// himpunanName: nama himpunan dari relasi, atau teks lama bila belum ditautkan.
+// Dipakai juga oleh payload pengurus di landing page.
+func himpunanName(ctx context.Context, u *models.User) string {
+	if u.HimpunanID == nil {
+		return u.AsalHimpunan
+	}
+	h, err := orm.GetByID[models.Himpunan](ctx, *u.HimpunanID)
+	if err != nil {
+		return u.AsalHimpunan
+	}
+	return himpunanLabel(h)
+}
+
+// himpunanLabel: short_label lebih dulu karena itu versi ringkas yang dipakai
+// marquee & kartu pengurus; nama panjang cuma cadangan.
+func himpunanLabel(h *models.Himpunan) string {
+	if h.ShortLabel != "" {
+		return h.ShortLabel
+	}
+	return h.Name
 }
 
 func (UserService) PublicView(ctx context.Context, u *models.User) map[string]any {
@@ -217,6 +244,7 @@ func (UserService) ListPublic(ctx context.Context, status string) ([]map[string]
 func enrichUsers(ctx context.Context, users []*models.User) []map[string]any {
 	divs, _ := orm.Objects[models.Division](ctx).All()
 	roles, _ := orm.Objects[models.Role](ctx).All()
+	himpunans, _ := orm.Objects[models.Himpunan](ctx).All()
 	divMap := map[int64]string{}
 	for _, d := range divs {
 		divMap[d.ID] = d.Name
@@ -224,6 +252,12 @@ func enrichUsers(ctx context.Context, users []*models.User) []map[string]any {
 	roleMap := map[int64]string{}
 	for _, r := range roles {
 		roleMap[r.ID] = r.Name
+	}
+	// Label per himpunan dipetakan sekali: daftar user bisa ratusan baris,
+	// query per baris jadi N+1.
+	himpunanMap := map[int64]string{}
+	for _, h := range himpunans {
+		himpunanMap[h.ID] = himpunanLabel(h)
 	}
 	out := make([]map[string]any, len(users))
 	for i, u := range users {
@@ -234,6 +268,14 @@ func enrichUsers(ctx context.Context, users []*models.User) []map[string]any {
 			"created_at": u.CreatedAt, "updated_at": u.UpdatedAt,
 			"phone": u.Phone, "hometown": u.Hometown,
 			"jabatan": u.Jabatan, "asal_himpunan": u.AsalHimpunan,
+			"himpunan_id": u.HimpunanID,
+		}
+		if u.HimpunanID != nil {
+			if label, ok := himpunanMap[*u.HimpunanID]; ok {
+				item["himpunan"] = label
+			}
+		} else if u.AsalHimpunan != "" {
+			item["himpunan"] = u.AsalHimpunan
 		}
 		if name, ok := divMap[u.DivisionID]; ok {
 			item["division"] = name
@@ -254,6 +296,11 @@ func (UserService) Get(ctx context.Context, id int64) (*models.User, error) {
 }
 
 func (UserService) Create(ctx context.Context, u *models.User, password string) (*models.User, error) {
+	if u.HimpunanID != nil {
+		if _, err := orm.GetByID[models.Himpunan](ctx, *u.HimpunanID); err != nil {
+			return nil, fmt.Errorf("himpunan tidak ditemukan")
+		}
+	}
 	hash, err := auth.HashPassword(password)
 	if err != nil {
 		return nil, err
@@ -265,6 +312,20 @@ func (UserService) Create(ctx context.Context, u *models.User, password string) 
 
 func (UserService) Update(ctx context.Context, id int64, values map[string]any) (*models.User, error) {
 	delete(values, "password_hash")
+	if v, ok := values["himpunan_id"]; ok {
+		hid, err := optionalID(v)
+		if err != nil {
+			return nil, err
+		}
+		if hid == nil {
+			values["himpunan_id"] = nil
+		} else {
+			if _, err := orm.GetByID[models.Himpunan](ctx, *hid); err != nil {
+				return nil, fmt.Errorf("himpunan tidak ditemukan")
+			}
+			values["himpunan_id"] = *hid
+		}
+	}
 	return orm.UpdateByID[models.User](ctx, id, values)
 }
 
@@ -300,6 +361,16 @@ func (UserService) UploadAvatar(ctx context.Context, id int64, file multipart.Fi
 }
 
 func (UserService) ImportCSV(ctx context.Context, rows []map[string]string) (success int, failures []map[string]string) {
+	// Peta label → id sekali di awal: impor bisa ratusan baris.
+	himpunanByLabel := map[string]int64{}
+	if list, err := orm.Objects[models.Himpunan](ctx).All(); err == nil {
+		for _, h := range list {
+			himpunanByLabel[normalizeLabel(h.Name)] = h.ID
+			if h.ShortLabel != "" {
+				himpunanByLabel[normalizeLabel(h.ShortLabel)] = h.ID
+			}
+		}
+	}
 	for _, row := range rows {
 		if strings.TrimSpace(row["username"]) == "" && strings.TrimSpace(row["email"]) == "" {
 			continue // baris kosong sisa spreadsheet
@@ -319,10 +390,18 @@ func (UserService) ImportCSV(ctx context.Context, rows []map[string]string) (suc
 		if pwd == "" {
 			pwd = "changeme123"
 		}
+		// asal_himpunan di CSV berupa teks: tautkan ke himpunan bila ejaannya
+		// cocok persis (nama atau short_label). Tidak cocok = tetap teks saja,
+		// sama seperti perilaku migrasi backfill.
+		var himpunanID *int64
+		if id, ok := himpunanByLabel[normalizeLabel(row["asal_himpunan"])]; ok {
+			himpunanID = &id
+		}
 		_, err := UserService{}.Create(ctx, &models.User{
 			Username: row["username"], Email: row["email"], FullName: row["full_name"],
 			DivisionID: divs[0].ID, RoleID: roles[0].ID, Phone: row["phone"],
 			Hometown: row["hometown"], Jabatan: row["jabatan"], AsalHimpunan: row["asal_himpunan"],
+			HimpunanID: himpunanID,
 		}, pwd)
 		if err != nil {
 			failures = append(failures, map[string]string{"row": row["username"], "error": err.Error()})
@@ -331,6 +410,11 @@ func (UserService) ImportCSV(ctx context.Context, rows []map[string]string) (suc
 		success++
 	}
 	return success, failures
+}
+
+// normalizeLabel: kunci pembanding nama himpunan (tanpa beda huruf besar/spasi).
+func normalizeLabel(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
 }
 
 type RoleService struct{}
@@ -1774,6 +1858,34 @@ type ProfileService struct{}
 
 var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 
+// optionalID: angka, string angka, atau null/"" (→ nil). Dipakai kolom FK yang
+// boleh dikosongkan, supaya form boleh kirim bentuk apa pun dari JSON.
+func optionalID(v any) (*int64, error) {
+	switch t := v.(type) {
+	case nil:
+		return nil, nil
+	case float64:
+		id := int64(t)
+		return &id, nil
+	case int64:
+		return &t, nil
+	case int:
+		id := int64(t)
+		return &id, nil
+	case string:
+		if strings.TrimSpace(t) == "" {
+			return nil, nil
+		}
+		id, err := strconv.ParseInt(strings.TrimSpace(t), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("id tidak valid")
+		}
+		return &id, nil
+	default:
+		return nil, fmt.Errorf("id tidak valid")
+	}
+}
+
 func (ProfileService) Get(ctx context.Context, userID int64) (map[string]any, error) {
 	u, err := orm.GetByID[models.User](ctx, userID)
 	if err != nil {
@@ -1783,11 +1895,26 @@ func (ProfileService) Get(ctx context.Context, userID int64) (map[string]any, er
 }
 
 func (ProfileService) Update(ctx context.Context, userID int64, values map[string]any) (*models.User, error) {
-	allowed := map[string]bool{"full_name": true, "birth_date": true, "hometown": true, "phone": true, "email": true}
+	allowed := map[string]bool{"full_name": true, "birth_date": true, "hometown": true, "phone": true, "email": true, "himpunan_id": true}
 	clean := map[string]any{}
 	for k, v := range values {
 		if allowed[k] {
 			clean[k] = v
+		}
+	}
+	if v, ok := clean["himpunan_id"]; ok {
+		// null / "" = lepas relasi; angka = tautkan ke himpunan yang ada.
+		id, err := optionalID(v)
+		if err != nil {
+			return nil, err
+		}
+		if id == nil {
+			clean["himpunan_id"] = nil
+		} else {
+			if _, err := orm.GetByID[models.Himpunan](ctx, *id); err != nil {
+				return nil, fmt.Errorf("himpunan tidak ditemukan")
+			}
+			clean["himpunan_id"] = *id
 		}
 	}
 	if v, ok := clean["email"]; ok {

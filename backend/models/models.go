@@ -101,6 +101,10 @@ type User struct {
 	Hometown     string                  `orm:"size:100" json:"hometown"`
 	Jabatan      string                  `orm:"size:100" json:"jabatan"`
 	AsalHimpunan string                  `orm:"size:150" json:"asal_himpunan"`
+	// Himpunan = relasi asal himpunan (sumber kebenaran). AsalHimpunan tetap
+	// disimpan sebagai teks untuk nilai lama yang belum ditautkan admin.
+	Himpunan   orm.BelongsTo[Himpunan] `json:"-"`
+	HimpunanID *int64                  `orm:"null;index" json:"himpunan_id"`
 	Phone        string                  `orm:"size:20" json:"phone"`
 	AvatarURL    string                  `orm:"size:255" json:"avatar_url"`
 	Division     orm.BelongsTo[Division] `json:"-"`

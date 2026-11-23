@@ -33,6 +33,7 @@ import (
 	app_finance_transactions_summary "backend/app/finance_transactions/summary"
 	app_himpunan "backend/app/himpunan"
 	app_himpunan_id "backend/app/himpunan/_id"
+	app_himpunan_options "backend/app/himpunan/options"
 	app_invitations "backend/app/invitations"
 	app_invitations_id "backend/app/invitations/_id"
 	app_invitations_id_convert "backend/app/invitations/_id/convert"
@@ -149,6 +150,7 @@ func init() {
 	framework.RegisterRoute("GET", "/finance_transactions/summary", app_finance_transactions_summary.GET)
 	framework.RegisterRoute("GET", "/himpunan", app_himpunan.GET)
 	framework.RegisterRoute("POST", "/himpunan", app_himpunan.POST)
+	framework.RegisterRoute("GET", "/himpunan/options", app_himpunan_options.GET)
 	framework.RegisterRoute("GET", "/himpunan/:id", app_himpunan_id.GET)
 	framework.RegisterRoute("PUT", "/himpunan/:id", app_himpunan_id.PUT)
 	framework.RegisterRoute("DELETE", "/himpunan/:id", app_himpunan_id.DELETE)

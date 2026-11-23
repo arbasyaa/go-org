@@ -28,7 +28,7 @@ import {
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import { unwrapList } from "@/lib/format"
-import type { Division, Role } from "@/lib/types"
+import type { Division, HimpunanOption, Role } from "@/lib/types"
 
 export default function CreateUserPage() {
   const router = useRouter()
@@ -37,6 +37,9 @@ export default function CreateUserPage() {
   )
   const roles = useApi(() =>
     apiRequest<Role[] | { items: Role[] }>("/roles").then(unwrapList)
+  )
+  const himpunan = useApi(() =>
+    apiRequest<HimpunanOption[] | { items: HimpunanOption[] }>("/himpunan/options").then(unwrapList)
   )
   const [form, setForm] = useState({
     username: "",
@@ -47,7 +50,9 @@ export default function CreateUserPage() {
     role_id: "",
     jabatan: "",
     asal_himpunan: "",
+    himpunan_id: "",
   })
+  const himpunanItems = (himpunan.data ?? []).map((h) => ({ value: String(h.id), label: h.label }))
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -60,6 +65,7 @@ export default function CreateUserPage() {
           ...form,
           division_id: Number(form.division_id),
           role_id: Number(form.role_id),
+          himpunan_id: form.himpunan_id ? Number(form.himpunan_id) : null,
         },
       })
       toast.success("Pengguna berhasil dibuat")
@@ -132,13 +138,32 @@ export default function CreateUserPage() {
                 </Field>
                 <Field>
                   <FieldLabel>Asal Himpunan</FieldLabel>
-                  <Input
-                    value={form.asal_himpunan}
-                    onChange={(e) =>
-                      setForm({ ...form, asal_himpunan: e.target.value })
-                    }
-                    placeholder="HIMATIF UMNU"
-                  />
+                  <Select
+                    items={himpunanItems}
+                    value={form.himpunan_id}
+                    onValueChange={(v) => {
+                      if (v == null) return
+                      const picked = himpunan.data?.find((h) => String(h.id) === v)
+                      setForm({
+                        ...form,
+                        himpunan_id: v,
+                        // Teks ikut diisi supaya tetap terbaca di tempat yang
+                        // belum memakai relasi (mis. kolom asal_himpunan CSV).
+                        asal_himpunan: picked?.label ?? form.asal_himpunan,
+                      })
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih himpunan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {himpunan.data?.map((h) => (
+                        <SelectItem key={h.id} value={String(h.id)}>
+                          {h.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </Field>
                 <Field>
                   <FieldLabel>Divisi</FieldLabel>

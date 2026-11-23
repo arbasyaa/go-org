@@ -49,7 +49,7 @@ func (OfficialService) ListActive(ctx context.Context) ([]OfficialView, error) {
 			Division: names[u.DivisionID],
 			Name:     u.FullName,
 			Role:     u.Jabatan,
-			Origin:   u.AsalHimpunan,
+			Origin:   himpunanName(ctx, u),
 			Avatar:   u.AvatarURL,
 		})
 	}

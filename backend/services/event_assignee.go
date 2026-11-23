@@ -85,7 +85,7 @@ func (EventService) Assignees(ctx context.Context, eventID int64) ([]map[string]
 		if u != nil {
 			entry["full_name"] = u.FullName
 			entry["username"] = u.Username
-			entry["asal_himpunan"] = u.AsalHimpunan
+			entry["asal_himpunan"] = himpunanName(ctx, u)
 			entry["jabatan"] = u.Jabatan
 			entry["avatar_url"] = u.AvatarURL
 		}

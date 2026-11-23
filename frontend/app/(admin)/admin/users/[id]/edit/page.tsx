@@ -32,7 +32,7 @@ import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import { unwrapList } from "@/lib/format"
 import { storageUrl } from "@/lib/storage-url"
-import type { Division, Role, User } from "@/lib/types"
+import type { Division, HimpunanOption, Role, User } from "@/lib/types"
 
 export default function EditUserPage({
   params,
@@ -48,7 +48,14 @@ export default function EditUserPage({
   const roles = useApi(() =>
     apiRequest<Role[] | { items: Role[] }>("/roles").then(unwrapList)
   )
+  const himpunan = useApi(() =>
+    apiRequest<HimpunanOption[] | { items: HimpunanOption[] }>("/himpunan/options").then(unwrapList)
+  )
   const [form, setForm] = useState<Partial<User> | null>(null)
+  const himpunanItems = [
+    { value: "none", label: "Belum ditautkan" },
+    ...(himpunan.data ?? []).map((h) => ({ value: String(h.id), label: h.label })),
+  ]
   const [newPassword, setNewPassword] = useState("")
   const [saving, setSaving] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -96,6 +103,7 @@ export default function EditUserPage({
           status: user.status,
           jabatan: user.jabatan,
           asal_himpunan: user.asal_himpunan,
+          himpunan_id: user.himpunan_id ?? null,
         },
       })
       toast.success("Pengguna diperbarui")
@@ -226,12 +234,36 @@ export default function EditUserPage({
                     </Field>
                     <Field>
                       <FieldLabel>Asal Himpunan</FieldLabel>
-                      <Input
-                        value={user.asal_himpunan ?? ""}
-                        onChange={(e) =>
-                          setForm({ ...user, asal_himpunan: e.target.value })
-                        }
-                      />
+                      <Select
+                        items={himpunanItems}
+                        value={user.himpunan_id ? String(user.himpunan_id) : "none"}
+                        onValueChange={(v) => {
+                          if (v == null) return
+                          const picked = himpunan.data?.find((h) => String(h.id) === v)
+                          setForm({
+                            ...user,
+                            himpunan_id: v === "none" ? null : Number(v),
+                            asal_himpunan: v === "none" ? user.asal_himpunan : picked?.label ?? user.asal_himpunan,
+                          })
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih himpunan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Belum ditautkan</SelectItem>
+                          {himpunan.data?.map((h) => (
+                            <SelectItem key={h.id} value={String(h.id)}>
+                              {h.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {!user.himpunan_id && user.asal_himpunan ? (
+                        <p className="text-xs text-muted-foreground">
+                          Teks lama: {user.asal_himpunan}
+                        </p>
+                      ) : null}
                     </Field>
                     <Field>
                       <FieldLabel>Divisi</FieldLabel>

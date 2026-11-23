@@ -29,7 +29,15 @@ import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import { getMe } from "@/lib/auth"
 import { storageUrl } from "@/lib/storage-url"
-import type { User } from "@/lib/types"
+import { unwrapList } from "@/lib/format"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type { HimpunanOption, User } from "@/lib/types"
 import {
   Dialog,
   DialogContent,
@@ -44,7 +52,6 @@ const profileSchema = z.object({
   hometown: z.string().optional(),
   phone: z.string().optional(),
 })
-
 const passwordSchema = z
   .object({
     old_password: z.string().min(1),
@@ -62,6 +69,17 @@ type PasswordForm = z.infer<typeof passwordSchema>
 export default function ProfilePage() {
   const { data: user, loading, error, setData } = useApi(getMe)
   const { refresh: refreshAuth } = useAuth()
+  // Asal himpunan dipilih dari daftar resmi, bukan diketik: ejaan bebas membuat
+  // satu himpunan muncul sebagai beberapa entri di landing.
+  const himpunan = useApi(() =>
+    apiRequest<HimpunanOption[] | { items: HimpunanOption[] }>("/himpunan/options").then(unwrapList)
+  )
+  const [himpunanID, setHimpunanID] = useState<string | null>(null)
+  // Select butuh `items` agar trigger menampilkan label, bukan nilai mentah.
+  const himpunanItems = [
+    { value: "none", label: "Belum ditentukan" },
+    ...(himpunan.data ?? []).map((h) => ({ value: String(h.id), label: h.label })),
+  ]
   const [saving, setSaving] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -122,9 +140,17 @@ export default function ProfilePage() {
     try {
       const updated = await apiRequest<User>("/me", {
         method: "PUT",
-        body: values,
+        body: {
+          ...values,
+          // Hanya dikirim bila user menyentuh pilihannya; kalau tidak, relasi
+          // yang sudah ada tidak boleh ikut terhapus oleh submit form lain.
+          ...(himpunanID !== null
+            ? { himpunan_id: himpunanID === "none" ? null : Number(himpunanID) }
+            : {}),
+        },
       })
       setData(updated)
+      setHimpunanID(null)
       await refreshAuth()
       toast.success("Profil berhasil diperbarui")
     } catch (err) {
@@ -287,6 +313,32 @@ export default function ProfilePage() {
                     <Field>
                       <FieldLabel>Asal</FieldLabel>
                       <Input {...profileForm.register("hometown")} />
+                    </Field>
+                    <Field>
+                      <FieldLabel>Asal Himpunan</FieldLabel>
+                      <Select
+                        items={himpunanItems}
+                        value={himpunanID ?? (user.himpunan_id ? String(user.himpunan_id) : "none")}
+                        onValueChange={(v) => setHimpunanID(v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih himpunan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Belum ditentukan</SelectItem>
+                          {himpunan.data?.map((h) => (
+                            <SelectItem key={h.id} value={String(h.id)}>
+                              {h.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {!user.himpunan_id && user.asal_himpunan ? (
+                        <p className="text-xs text-muted-foreground">
+                          Tercatat: {user.asal_himpunan}. Pilih dari daftar agar tampil seragam di
+                          halaman pengurus.
+                        </p>
+                      ) : null}
                     </Field>
                     <Field>
                       <FieldLabel>Telepon</FieldLabel>

@@ -16,6 +16,10 @@ export interface User {
   hometown?: string | null
   jabatan?: string | null
   asal_himpunan?: string | null
+  /** Relasi asal himpunan ke tabel himpunan; null = belum ditautkan. */
+  himpunan_id?: number | null
+  /** Label tampil asal himpunan (short_label relasi, atau teks lama). */
+  himpunan?: string | null
   phone?: string | null
   avatar_url?: string | null
   division_id?: number | null
@@ -26,6 +30,14 @@ export interface User {
   violation_count?: number
   /** Daftar permission code — dikirim bersama GET /me. */
   permissions?: string[]
+}
+
+export interface HimpunanOption {
+  id: number
+  /** Label tampil (short_label, atau name bila kosong). */
+  label: string
+  name: string
+  institution?: string
 }
 
 export interface Division {
