@@ -56,15 +56,17 @@ type KaryaSubmitInput struct {
 
 // KaryaView = bentuk yang dikirim ke klien publik.
 type KaryaView struct {
-	ID          int64      `json:"id"`
-	Code        string     `json:"code"`
-	Title       string     `json:"title"`
-	AuthorName  string     `json:"author_name"`
-	Himpunan    string     `json:"himpunan"`
-	HimpunanID  int64      `json:"himpunan_id"`
-	RepoURL     string     `json:"repo_url"`
-	ImageURL    string     `json:"image_url"`
-	AboutHTML   string     `json:"about_html,omitempty"`
+	ID         int64  `json:"id"`
+	Code       string `json:"code"`
+	Title      string `json:"title"`
+	AuthorName string `json:"author_name"`
+	Himpunan   string `json:"himpunan"`
+	HimpunanID int64  `json:"himpunan_id"`
+	RepoURL    string `json:"repo_url"`
+	ImageURL   string `json:"image_url"`
+	AboutHTML  string `json:"about_html,omitempty"`
+	// AboutMD hanya diisi untuk admin (halaman kurasi), tidak untuk publik.
+	AboutMD     string     `json:"about_md,omitempty"`
 	Status      string     `json:"status"`
 	ReviewNote  string     `json:"review_note,omitempty"`
 	LikeCount   int        `json:"like_count"`
@@ -392,6 +394,20 @@ func (KaryaService) StatusByCode(ctx context.Context, code string) (map[string]a
 		out["published_at"] = k.PublishedAt
 	}
 	return out, nil
+}
+
+// ByID: dipakai halaman kurasi admin. Boleh membuka karya berstatus apa pun,
+// dan markdown-nya ikut dirender supaya pengurus membaca isi aslinya sebelum
+// memutuskan.
+func (KaryaService) ByID(ctx context.Context, id int64) (*KaryaView, error) {
+	k, err := orm.GetByID[models.Karya](ctx, id)
+	if err != nil {
+		return nil, ErrKaryaNotFound
+	}
+	v := toKaryaView(k, himpunanNames(ctx))
+	v.AboutHTML = RenderKaryaMarkdown(k.AboutMD)
+	v.AboutMD = k.AboutMD
+	return &v, nil
 }
 
 // ListAll: untuk admin, semua status.

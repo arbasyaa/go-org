@@ -11,6 +11,29 @@ import (
 	"github.com/lrndwy/gokil/views"
 )
 
+// GET /karya/:id — detail satu kiriman untuk halaman kurasi admin, termasuk
+// isi markdown yang sudah dirender.
+func GET(ctx *views.Context) error {
+	return auth.RequireAuth(func(c *views.Context) error {
+		user, _ := auth.CurrentUser(c.Request.Context())
+		if ok, _ := permission.UserHas(c, user, "karya.manage"); !ok {
+			return c.Error(403, "akses ditolak")
+		}
+		id, err := models.ParseID(c.Param("id"))
+		if err != nil {
+			return c.Error(400, "id tidak valid")
+		}
+		item, err := services.KaryaService{}.ByID(c.Request.Context(), id)
+		if errors.Is(err, services.ErrKaryaNotFound) {
+			return c.Error(404, "karya tidak ditemukan")
+		}
+		if err != nil {
+			return c.Error(500, err.Error())
+		}
+		return c.Success(200, "karya", item)
+	})(ctx)
+}
+
 // PUT /karya/:id — keputusan kurasi: publish atau tolak, dengan catatan opsional.
 func PUT(ctx *views.Context) error {
 	return auth.RequireAuth(func(c *views.Context) error {

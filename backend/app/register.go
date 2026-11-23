@@ -165,6 +165,7 @@ func init() {
 	framework.RegisterRoute("POST", "/invitations/:id/convert", app_invitations_id_convert.POST)
 	framework.RegisterRoute("GET", "/invitations/:id/download", app_invitations_id_download.GET)
 	framework.RegisterRoute("GET", "/karya", app_karya.GET)
+	framework.RegisterRoute("GET", "/karya/:id", app_karya_id.GET)
 	framework.RegisterRoute("PUT", "/karya/:id", app_karya_id.PUT)
 	framework.RegisterRoute("DELETE", "/karya/:id", app_karya_id.DELETE)
 	framework.RegisterRoute("PUT", "/landing_sections", app_landing_sections.PUT)

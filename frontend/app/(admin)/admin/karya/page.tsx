@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
-import { CheckIcon, ExternalLinkIcon, Trash2Icon, XIcon } from "lucide-react"
+import { CheckIcon, ExternalLinkIcon, EyeIcon, Trash2Icon, XIcon } from "lucide-react"
 import { toast } from "sonner"
 import {
   AdvancedDataTable,
@@ -101,7 +101,12 @@ export default function AdminKaryaPage() {
         header: sortableHeader("Karya"),
         cell: ({ row }) => (
           <div className="min-w-0">
-            <p className="truncate font-medium">{row.original.title}</p>
+            <Link
+              href={`/admin/karya/${row.original.id}`}
+              className="truncate font-medium underline-offset-4 hover:underline"
+            >
+              {row.original.title}
+            </Link>
             <p className="truncate text-xs text-muted-foreground">
               {row.original.author_name} · {row.original.himpunan || "-"}
             </p>
@@ -145,6 +150,13 @@ export default function AdminKaryaPage() {
         header: () => <div className="text-right">Aksi</div>,
         cell: ({ row }) => (
           <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              size="sm"
+              render={<Link href={`/admin/karya/${row.original.id}`} />}
+            >
+              <EyeIcon className="mr-1 size-4" />
+              Detail
+            </Button>
             <Button
               variant="outline"
               size="sm"
