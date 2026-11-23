@@ -15,7 +15,7 @@ import (
 // LandingSectionKeys: section landing yang bisa disembunyikan (hero selalu tampil).
 var LandingSectionKeys = map[string]bool{
 	"about": true, "programs": true, "press": true, "members": true,
-	"officials": true, "merch": true, "invitation": true, "cta": true,
+	"officials": true, "karya": true, "merch": true, "invitation": true, "cta": true,
 }
 
 // ValidateLandingSections: "" atau JSON object dengan key yang dikenal dan nilai bool.

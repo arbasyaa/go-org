@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"backend/internal/clientip"
 	"backend/internal/storageutil"
 	"backend/internal/timeutil"
 	"backend/services"
@@ -21,7 +22,7 @@ import (
 // unggah gagal setelah validasi, baris DB belum dibuat sehingga tidak ada
 // undangan tanpa lampiran.
 func POST(ctx *views.Context) error {
-	ip := clientIP(ctx)
+	ip := clientip.From(ctx)
 
 	if err := ctx.ParseMultipart(services.InvitationMaxAttachmentBytes + (1 << 20)); err != nil {
 		return ctx.Error(400, "gagal membaca form: "+err.Error())
@@ -95,23 +96,4 @@ func sanitizePublicName(name string) string {
 		return "undangan.pdf"
 	}
 	return name
-}
-
-// clientIP mengambil IP pengirim, menghormati X-Forwarded-For dari proxy Next.js
-// (di produksi backend berada di belakang frontend/Traefik).
-func clientIP(ctx *views.Context) string {
-	if fwd := ctx.Request.Header.Get("X-Forwarded-For"); fwd != "" {
-		if i := strings.Index(fwd, ","); i > 0 {
-			return strings.TrimSpace(fwd[:i])
-		}
-		return strings.TrimSpace(fwd)
-	}
-	if real := ctx.Request.Header.Get("X-Real-IP"); real != "" {
-		return strings.TrimSpace(real)
-	}
-	host := ctx.Request.RemoteAddr
-	if i := strings.LastIndex(host, ":"); i > 0 {
-		return host[:i]
-	}
-	return host
 }

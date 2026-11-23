@@ -30,9 +30,10 @@ import {
 } from "@/components/ui/select"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
+import { fetchHimpunanOptions } from "@/lib/himpunan"
 import { unwrapList } from "@/lib/format"
 import { storageUrl } from "@/lib/storage-url"
-import type { Division, HimpunanOption, Role, User } from "@/lib/types"
+import type { Division, Role, User } from "@/lib/types"
 
 export default function EditUserPage({
   params,
@@ -49,7 +50,7 @@ export default function EditUserPage({
     apiRequest<Role[] | { items: Role[] }>("/roles").then(unwrapList)
   )
   const himpunan = useApi(() =>
-    apiRequest<HimpunanOption[] | { items: HimpunanOption[] }>("/himpunan/options").then(unwrapList)
+    fetchHimpunanOptions()
   )
   const [form, setForm] = useState<Partial<User> | null>(null)
   const himpunanItems = [

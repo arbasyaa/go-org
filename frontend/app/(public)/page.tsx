@@ -2,11 +2,13 @@ import { AboutSection } from "@/components/landing/about-section"
 import { CtaSection } from "@/components/landing/cta-section"
 import { HeroSection } from "@/components/landing/hero-section"
 import { InvitationSection } from "@/components/landing/invitation-section"
+import { KaryaSection } from "@/components/landing/karya-section"
 import { MembersSection } from "@/components/landing/members-section"
 import { MerchSection } from "@/components/landing/merch-section"
 import { OfficialsSection } from "@/components/landing/officials-section"
 import { PressSection } from "@/components/landing/press-section"
 import { ProgramsSection } from "@/components/landing/programs-section"
+import { getKaryaFeatured } from "@/lib/karya"
 import {
   getHimpunan,
   getLandingSections,
@@ -44,13 +46,14 @@ export const dynamic = "force-dynamic"
 const PROGRAM_LIMIT = 5
 
 export default async function LandingPage() {
-  const [press, merch, himpunan, programs, sections, officials] = await Promise.all([
+  const [press, merch, himpunan, programs, sections, officials, karya] = await Promise.all([
     getPressReleases(5),
     getMerch(),
     getHimpunan(),
     getWorkPrograms({ limit: PROGRAM_LIMIT }),
     getLandingSections(),
     getOfficials(),
+    getKaryaFeatured(),
   ])
   const directory = groupByCity(himpunan)
 
@@ -62,6 +65,7 @@ export default async function LandingPage() {
       {sections.press ? <PressSection items={press} /> : null}
       {sections.members ? <MembersSection directory={directory} /> : null}
       {sections.officials ? <OfficialsSection groups={officials} /> : null}
+      {sections.karya ? <KaryaSection karya={karya} /> : null}
       {sections.merch ? <MerchSection items={merch} /> : null}
       {sections.invitation ? <InvitationSection /> : null}
       {sections.cta ? <CtaSection /> : null}

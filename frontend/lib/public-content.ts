@@ -57,6 +57,14 @@ export interface MerchItem {
   updated_at?: string
 }
 
+/** Pilihan ringkas untuk dropdown form (profil, admin user, form karya). */
+export interface HimpunanOption {
+  id: number
+  /** Label tampil: short_label, atau name bila kosong. */
+  label: string
+  name: string
+}
+
 export interface HimpunanItem {
   id: number
   name: string

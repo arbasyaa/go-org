@@ -33,6 +33,8 @@ func init() {
 		&PressRelease{},
 		&MerchItem{},
 		&Himpunan{},
+		&Karya{},
+		&KaryaLike{},
 		&WorkProgram{},
 		&EventAssignee{},
 		&Announcement{},
@@ -93,24 +95,24 @@ type Division struct {
 
 type User struct {
 	orm.BaseModel
-	Username     string                  `orm:"unique,required,size:50" json:"username"`
-	Email        string                  `orm:"unique,required,size:100" json:"email"`
-	PasswordHash string                  `orm:"size:255" json:"-"`
-	FullName     string                  `orm:"size:150" json:"full_name"`
-	BirthDate    *time.Time              `orm:"null" json:"birth_date,omitempty"`
-	Hometown     string                  `orm:"size:100" json:"hometown"`
-	AsalHimpunan string                  `orm:"size:150" json:"asal_himpunan"`
+	Username     string     `orm:"unique,required,size:50" json:"username"`
+	Email        string     `orm:"unique,required,size:100" json:"email"`
+	PasswordHash string     `orm:"size:255" json:"-"`
+	FullName     string     `orm:"size:150" json:"full_name"`
+	BirthDate    *time.Time `orm:"null" json:"birth_date,omitempty"`
+	Hometown     string     `orm:"size:100" json:"hometown"`
+	AsalHimpunan string     `orm:"size:150" json:"asal_himpunan"`
 	// Himpunan = relasi asal himpunan (sumber kebenaran). AsalHimpunan tetap
 	// disimpan sebagai teks untuk nilai lama yang belum ditautkan admin.
 	Himpunan   orm.BelongsTo[Himpunan] `json:"-"`
 	HimpunanID *int64                  `orm:"null;index" json:"himpunan_id"`
-	Phone        string                  `orm:"size:20" json:"phone"`
-	AvatarURL    string                  `orm:"size:255" json:"avatar_url"`
-	Division     orm.BelongsTo[Division] `json:"-"`
-	DivisionID   int64                   `orm:"index" json:"division_id"`
-	Role         orm.BelongsTo[Role]     `json:"-"`
-	RoleID       int64                   `orm:"index" json:"role_id"`
-	Status       string                  `orm:"size:20;default:active" json:"status"`
+	Phone      string                  `orm:"size:20" json:"phone"`
+	AvatarURL  string                  `orm:"size:255" json:"avatar_url"`
+	Division   orm.BelongsTo[Division] `json:"-"`
+	DivisionID int64                   `orm:"index" json:"division_id"`
+	Role       orm.BelongsTo[Role]     `json:"-"`
+	RoleID     int64                   `orm:"index" json:"role_id"`
+	Status     string                  `orm:"size:20;default:active" json:"status"`
 }
 
 type Event struct {
@@ -474,6 +476,40 @@ type Himpunan struct {
 	SortOrder   int    `orm:"default:0" json:"sort_order"`
 	// Region: daerah 1-6; 0 = belum ditentukan.
 	Region int `orm:"default:0" json:"region"`
+}
+
+// Karya: showcase repositori anggota. Pengajuan datang tanpa login, lalu
+// dikurasi admin. Desain: docs/superpowers/specs/2026-11-23-karya-showcase-design.md
+type Karya struct {
+	orm.BaseModel
+	// Code = ID pelacakan untuk pengirim tanpa akun (mis. KRY-7F3K9Q).
+	Code       string `orm:"unique,required,size:16" json:"code"`
+	Title      string `orm:"required,size:150" json:"title"`
+	AuthorName string `orm:"required,size:150" json:"author_name"`
+	// RESTRICT: karya tidak boleh kehilangan atribusi karena himpunan dihapus.
+	Himpunan   orm.BelongsTo[Himpunan] `json:"-"`
+	HimpunanID int64                   `orm:"index" json:"himpunan_id"`
+	RepoURL    string                  `orm:"size:512" json:"repo_url"`
+	// AboutMD disimpan apa adanya; HTML-nya dirender saat dibaca.
+	AboutMD  string `orm:"type:text" json:"about_md,omitempty"`
+	ImageURL string `orm:"size:512" json:"image_url"`
+	// review | published | rejected
+	Status      string     `orm:"size:20;default:review" json:"status"`
+	ReviewNote  string     `orm:"size:500" json:"review_note"`
+	PublishedAt *time.Time `orm:"null" json:"published_at,omitempty"`
+	LikeCount   int        `orm:"default:0" json:"like_count"`
+	// Persetujuan S&K: versi teks yang dicentang + waktunya.
+	TermsVersion    string     `orm:"size:20" json:"terms_version"`
+	TermsAcceptedAt *time.Time `orm:"null" json:"terms_accepted_at,omitempty"`
+}
+
+// KaryaLike: satu baris per pengunjung per karya, hanya untuk menahan like
+// berulang. Identitas tidak pernah ditampilkan.
+type KaryaLike struct {
+	orm.BaseModel
+	Karya       orm.BelongsTo[Karya] `json:"-"`
+	KaryaID     int64                `orm:"index" json:"karya_id"`
+	VisitorHash string               `orm:"size:64" json:"-"`
 }
 
 // WorkProgram: program kerja yang ditampilkan di landing page.

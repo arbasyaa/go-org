@@ -29,6 +29,7 @@ export type LandingSectionKey =
   | "press"
   | "members"
   | "officials"
+  | "karya"
   | "merch"
   | "invitation"
   | "cta"
@@ -43,6 +44,7 @@ export const navLinks: readonly NavLink[] = [
   { label: "Jaringan", href: "/#himpunan", section: "members" },
   { label: "Anggota", href: "/anggota", section: "members" },
   { label: "Pengurus", href: "/#pengurus", section: "officials" },
+  { label: "Karya", href: "/karya", section: "karya" },
   { label: "Merch", href: "/merch", section: "merch" },
   { label: "Undangan", href: "/undangan", section: "invitation" },
 ]

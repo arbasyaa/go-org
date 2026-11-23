@@ -184,6 +184,11 @@ export const portalNav: NavGroup[] = [
           },
           { title: "Merch", url: "/admin/merch", permission: "merch.manage" },
           {
+            title: "Karya",
+            url: "/admin/karya",
+            permission: "karya.manage",
+          },
+          {
             title: "Himpunan",
             url: "/admin/himpunan",
             permission: "himpunan.manage",

@@ -33,11 +33,12 @@ import (
 	app_finance_transactions_summary "backend/app/finance_transactions/summary"
 	app_himpunan "backend/app/himpunan"
 	app_himpunan_id "backend/app/himpunan/_id"
-	app_himpunan_options "backend/app/himpunan/options"
 	app_invitations "backend/app/invitations"
 	app_invitations_id "backend/app/invitations/_id"
 	app_invitations_id_convert "backend/app/invitations/_id/convert"
 	app_invitations_id_download "backend/app/invitations/_id/download"
+	app_karya "backend/app/karya"
+	app_karya_id "backend/app/karya/_id"
 	app_landing_sections "backend/app/landing_sections"
 	app_letter_categories "backend/app/letter_categories"
 	app_letter_categories_id "backend/app/letter_categories/_id"
@@ -66,6 +67,11 @@ import (
 	app_press_releases_id "backend/app/press_releases/_id"
 	app_public_himpunan "backend/app/public/himpunan"
 	app_public_invitations "backend/app/public/invitations"
+	app_public_karya "backend/app/public/karya"
+	app_public_karya_code "backend/app/public/karya/_code"
+	app_public_karya_code_like "backend/app/public/karya/_code/like"
+	app_public_karya_preview "backend/app/public/karya_preview"
+	app_public_karya_status_code "backend/app/public/karya_status/_code"
 	app_public_merch "backend/app/public/merch"
 	app_public_officials "backend/app/public/officials"
 	app_public_press_releases "backend/app/public/press_releases"
@@ -150,7 +156,6 @@ func init() {
 	framework.RegisterRoute("GET", "/finance_transactions/summary", app_finance_transactions_summary.GET)
 	framework.RegisterRoute("GET", "/himpunan", app_himpunan.GET)
 	framework.RegisterRoute("POST", "/himpunan", app_himpunan.POST)
-	framework.RegisterRoute("GET", "/himpunan/options", app_himpunan_options.GET)
 	framework.RegisterRoute("GET", "/himpunan/:id", app_himpunan_id.GET)
 	framework.RegisterRoute("PUT", "/himpunan/:id", app_himpunan_id.PUT)
 	framework.RegisterRoute("DELETE", "/himpunan/:id", app_himpunan_id.DELETE)
@@ -159,6 +164,9 @@ func init() {
 	framework.RegisterRoute("DELETE", "/invitations/:id", app_invitations_id.DELETE)
 	framework.RegisterRoute("POST", "/invitations/:id/convert", app_invitations_id_convert.POST)
 	framework.RegisterRoute("GET", "/invitations/:id/download", app_invitations_id_download.GET)
+	framework.RegisterRoute("GET", "/karya", app_karya.GET)
+	framework.RegisterRoute("PUT", "/karya/:id", app_karya_id.PUT)
+	framework.RegisterRoute("DELETE", "/karya/:id", app_karya_id.DELETE)
 	framework.RegisterRoute("PUT", "/landing_sections", app_landing_sections.PUT)
 	framework.RegisterRoute("GET", "/letter_categories", app_letter_categories.GET)
 	framework.RegisterRoute("POST", "/letter_categories", app_letter_categories.POST)
@@ -203,6 +211,12 @@ func init() {
 	framework.RegisterRoute("DELETE", "/press_releases/:id", app_press_releases_id.DELETE)
 	framework.RegisterRoute("GET", "/public/himpunan", app_public_himpunan.GET)
 	framework.RegisterRoute("POST", "/public/invitations", app_public_invitations.POST)
+	framework.RegisterRoute("GET", "/public/karya", app_public_karya.GET)
+	framework.RegisterRoute("POST", "/public/karya", app_public_karya.POST)
+	framework.RegisterRoute("GET", "/public/karya/:code", app_public_karya_code.GET)
+	framework.RegisterRoute("POST", "/public/karya/:code/like", app_public_karya_code_like.POST)
+	framework.RegisterRoute("POST", "/public/karya_preview", app_public_karya_preview.POST)
+	framework.RegisterRoute("GET", "/public/karya_status/:code", app_public_karya_status_code.GET)
 	framework.RegisterRoute("GET", "/public/merch", app_public_merch.GET)
 	framework.RegisterRoute("GET", "/public/officials", app_public_officials.GET)
 	framework.RegisterRoute("GET", "/public/press_releases", app_public_press_releases.GET)

@@ -142,10 +142,10 @@ func jakartaLocation() *time.Location {
 // Rate limit form publik (in-memory)
 // ---------------------------------------------------------------------------
 
-// invitationLimiter membatasi kiriman form publik per IP. In-memory, jadi
+// ipLimiter membatasi kiriman form publik per IP. In-memory, jadi
 // hanya akurat untuk satu instance backend — lihat PONYTAIL-DEBT.md untuk
 // trigger pindah ke Redis saat backend di-scale.
-type invitationLimiter struct {
+type ipLimiter struct {
 	mu      sync.Mutex
 	hits    map[string][]time.Time
 	max     int
@@ -154,7 +154,7 @@ type invitationLimiter struct {
 	gcEvery time.Duration
 }
 
-var publicInvitationLimiter = &invitationLimiter{
+var publicInvitationLimiter = &ipLimiter{
 	hits:    map[string][]time.Time{},
 	max:     5,
 	window:  time.Hour,
@@ -162,7 +162,7 @@ var publicInvitationLimiter = &invitationLimiter{
 }
 
 // Allow mencatat satu kiriman dan mengembalikan false kalau kuota habis.
-func (l *invitationLimiter) Allow(key string) bool {
+func (l *ipLimiter) Allow(key string) bool {
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()

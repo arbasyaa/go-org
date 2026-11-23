@@ -181,9 +181,20 @@ func (HimpunanService) ListActive(ctx context.Context) ([]*models.Himpunan, erro
 }
 
 func (s HimpunanService) Delete(ctx context.Context, id int64) error {
-	if _, err := s.Get(ctx, id); err != nil {
+	h, err := s.Get(ctx, id)
+	if err != nil {
 		return err
 	}
-	_, err := orm.DeleteByID[models.Himpunan](ctx, id)
+	// Karya memakai RESTRICT: kiriman anggota tidak boleh kehilangan atribusi
+	// gara-gara himpunannya dihapus. Cek dulu supaya admin dapat pesan yang bisa
+	// dibaca, bukan error constraint Postgres.
+	used, err := orm.Objects[models.Karya](ctx).Filter("himpunan_id", id).Count()
+	if err != nil {
+		return err
+	}
+	if used > 0 {
+		return fmt.Errorf("himpunan %s masih dipakai %d karya; pindahkan atau hapus karyanya dulu", h.Name, used)
+	}
+	_, err = orm.DeleteByID[models.Himpunan](ctx, id)
 	return err
 }

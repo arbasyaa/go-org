@@ -31,14 +31,6 @@ export interface User {
   permissions?: string[]
 }
 
-export interface HimpunanOption {
-  id: number
-  /** Label tampil (short_label, atau name bila kosong). */
-  label: string
-  name: string
-  institution?: string
-}
-
 export interface Division {
   id: number
   name: string

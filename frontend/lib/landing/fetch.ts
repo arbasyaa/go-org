@@ -212,6 +212,7 @@ const SECTION_KEYS: LandingSectionKey[] = [
   "press",
   "members",
   "officials",
+  "karya",
   "merch",
   "invitation",
   "cta",

@@ -181,6 +181,26 @@ Setiap tabel di PRD §4 dipetakan ke model Go yang embed `orm.BaseModel` (`ID in
 
 **RolePermission:** junction M2M `role_id` + `permission_id` — `UNIQUE(role_id, permission_id)` via migration manual.
 
+### 2.3a Karya (showcase repositori)
+| Field | Tipe | Catatan |
+|---|---|---|
+| `code` | varchar(16) unique | ID pelacakan untuk pengirim tanpa akun (`KRY-7F3K9Q`), acak dari `crypto/rand` |
+| `title` | varchar(150) | nama karya |
+| `author_name` | varchar(150) | nama pengirim, untuk kredit |
+| `himpunan_id` | FK → himpunan | `ON DELETE RESTRICT`: `HimpunanService.Delete` menolak dengan pesan jelas bila masih dipakai |
+| `repo_url` | varchar(512) | dinormalisasi: hanya `https://github.com/<owner>/<repo>` |
+| `about_md` | text | markdown mentah; HTML dirender saat dibaca (tidak disimpan) |
+| `image_url` | varchar(512) | wajib; WebP 1600 px lewat `imageutil` |
+| `status` | enum | `review` \| `published` \| `rejected` |
+| `review_note` | varchar(500) | catatan kurasi, tampil di halaman status pengirim |
+| `published_at` | timestamptz | diisi saat publish, dikosongkan saat ditolak/diturunkan |
+| `like_count` | int | penghitung; urutan daftar & pemilihan unggulan landing |
+| `terms_version`, `terms_accepted_at` | varchar(20), timestamptz | persetujuan S&K yang dicatat server |
+
+`karya_like` menyimpan `UNIQUE(karya_id, visitor_hash)` untuk menahan like berulang. `visitor_hash = sha256(id_pengunjung ‖ ip)`; id pengunjung dibuat browser (localStorage). **Identitas ini tidak pernah ditampilkan** — antarmuka hanya menampilkan angka.
+
+Tanpa login: `POST /public/karya` (honeypot + limiter 3/jam/IP), `POST /public/karya_preview` (60/jam), `GET /public/karya` (`?himpunan_id`, `?sort=likes|new`, `X-Total-Count`), `GET /public/karya/:code`, `GET /public/karya_status/:code`, `POST /public/karya/:code/like` (30/jam). Kurasi: `GET /karya`, `PUT /karya/:id`, `DELETE /karya/:id` dengan permission `karya.manage`. Markdown: goldmark tanpa raw HTML (`html.WithUnsafe` tidak dipakai) + `SanitizeHTML` sebagai lapis kedua. Rute statis `karya_preview`/`karya_status` sengaja **sejajar** `/public/karya`, bukan di bawahnya, karena router gokil linear (`/public/karya/preview` akan tertelan `:code`).
+
 ### 2.3 User
 | Field | Tipe | Catatan |
 |---|---|---|

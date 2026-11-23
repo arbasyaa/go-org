@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
+import { fetchHimpunanOptions } from "@/lib/himpunan"
 import { getMe } from "@/lib/auth"
 import { storageUrl } from "@/lib/storage-url"
 import { unwrapList } from "@/lib/format"
@@ -37,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { HimpunanOption, User } from "@/lib/types"
+import type { User } from "@/lib/types"
 import {
   Dialog,
   DialogContent,
@@ -72,7 +73,7 @@ export default function ProfilePage() {
   // Asal himpunan dipilih dari daftar resmi, bukan diketik: ejaan bebas membuat
   // satu himpunan muncul sebagai beberapa entri di landing.
   const himpunan = useApi(() =>
-    apiRequest<HimpunanOption[] | { items: HimpunanOption[] }>("/himpunan/options").then(unwrapList)
+    fetchHimpunanOptions()
   )
   const [himpunanID, setHimpunanID] = useState<string | null>(null)
   // Select butuh `items` agar trigger menampilkan label, bukan nilai mentah.

@@ -112,7 +112,7 @@ func userPayload(ctx context.Context, u *models.User) map[string]any {
 		"division_id": u.DivisionID, "role_id": u.RoleID, "status": u.Status,
 		"hometown": u.Hometown, "phone": u.Phone,
 		"asal_himpunan": u.AsalHimpunan,
-		"himpunan_id": u.HimpunanID,
+		"himpunan_id":   u.HimpunanID,
 	}
 	if u.BirthDate != nil {
 		out["birth_date"] = u.BirthDate.Format("2006-01-02")
@@ -268,7 +268,7 @@ func enrichUsers(ctx context.Context, users []*models.User) []map[string]any {
 			"created_at": u.CreatedAt, "updated_at": u.UpdatedAt,
 			"phone": u.Phone, "hometown": u.Hometown,
 			"asal_himpunan": u.AsalHimpunan,
-			"himpunan_id": u.HimpunanID,
+			"himpunan_id":   u.HimpunanID,
 		}
 		if u.HimpunanID != nil {
 			if label, ok := himpunanMap[*u.HimpunanID]; ok {
