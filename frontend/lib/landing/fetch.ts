@@ -97,6 +97,20 @@ export async function getOfficials(): Promise<OfficialGroup[]> {
   return groupOfficials(rows)
 }
 
+/**
+ * Peringkat jabatan untuk urutan dalam satu divisi: pimpinan dulu, lalu
+ * wakil/sekretaris/bendahara, lalu anggota. Tanpa ini urutan mengikuti id user,
+ * sehingga kartu besar (lead) jatuh ke orang yang paling awal dibuat akunnya —
+ * mis. anggota yang id-nya lebih kecil dari Kepala Divisi.
+ */
+function roleRank(role: string) {
+  if (/Wakil/i.test(role)) return 1
+  if (/Kepala|Koordinator/i.test(role)) return 0
+  if (/Sekretaris/i.test(role)) return 2
+  if (/Bendahara/i.test(role)) return 3
+  return 4
+}
+
 function groupOfficials(rows: OfficialItem[]): OfficialGroup[] {
   const groups = new Map<string, OfficialGroup>()
   for (const row of rows) {
@@ -110,6 +124,10 @@ function groupOfficials(rows: OfficialItem[]): OfficialGroup[] {
       avatar: row.avatar_url ? storageUrl(row.avatar_url) : undefined,
     })
     groups.set(division, group)
+  }
+  // sort stabil: jabatan seranking tetap urut id dari API.
+  for (const group of groups.values()) {
+    group.members.sort((a, b) => roleRank(a.role) - roleRank(b.role))
   }
   return [...groups.values()]
 }
