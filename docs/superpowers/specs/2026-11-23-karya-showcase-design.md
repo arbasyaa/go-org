@@ -119,18 +119,28 @@ unggulan; `idx_karya_himpunan (himpunan_id)` untuk filter.
 Markdown **tidak** disimpan dalam bentuk HTML. Render dilakukan saat dibaca.
 Dua sumber (md dan html) yang disimpan bersama pasti akan berbeda suatu hari.
 
-### Like
+### Tabel `karya_like`
 
-Tidak ada tabel like dan tidak ada identitas pemberi like. Yang ada hanya kolom
-`karya.like_count` dan sebuah endpoint yang menaikkannya. Permintaan pemilik
-produk: tampilkan angkanya saja, jangan mengenali siapa yang menekan.
+| Kolom | Tipe | Catatan |
+|---|---|---|
+| `id` | BIGINT PK | |
+| `karya_id` | BIGINT FK → karya | `ON DELETE CASCADE` |
+| `visitor_hash` | varchar(64) | sha256(id pengunjung ‖ ip); id pengunjung dibuat browser dan disimpan di localStorage |
+| `created_at` | timestamptz | dari `orm.BaseModel` |
 
-Konsekuensi yang diterima: angka bisa dinaikkan siapa pun dengan menekan
-berulang, dan tidak ada cara membedakan satu orang menekan sepuluh kali dari
-sepuluh orang menekan sekali. Angka ini dipakai untuk urutan tampil dan
-pemilihan karya unggulan, bukan untuk klaim apa pun. Satu-satunya penjaga adalah
-limiter sementara per IP (tidak disimpan, hanya untuk menahan skrip), bukan
-pengenal pengunjung.
+`UNIQUE (karya_id, visitor_hash)` ditegakkan di SQL, dan hanya dipakai untuk
+menahan satu pengunjung menaikkan angka berkali-kali. `karya.like_count` naik
+hanya kalau baris ini berhasil disisipkan.
+
+**Identitas ini tidak pernah ditampilkan.** Tidak ada daftar penyuka, tidak ada
+"kamu sudah menyukai", tidak ada nama atau avatar. Antarmuka hanya menampilkan
+angka. Tidak ada salt server: nilainya hanya untuk deduplikasi, bukan rahasia,
+dan id pengunjung sudah acak.
+
+Batas yang diterima: menghapus localStorage, jendela penyamaran, atau `curl`
+menghasilkan pengunjung baru. Limiter per IP pada endpoint like (30/jam) membuat
+penggelembungan butuh banyak IP. Angka ini dipakai untuk urutan tampil dan
+pemilihan karya unggulan, bukan klaim resmi.
 
 ## 8. Status
 
@@ -167,7 +177,7 @@ pengenal pengunjung.
 | GET | `/public/karya/featured` | satu karya `published` untuk landing, atau `null`. Aturan sama dengan default sort. |
 | GET | `/public/karya/:code` | detail `published` + `html` hasil render. 404 bila bukan published. |
 | GET | `/public/karya/status/:code` | `{code, title, status, review_note, created_at, published_at}`. Tidak mengembalikan isi karya. |
-| POST | `/public/karya/:code/like` | 404 bila bukan published. Balikan `{like_count}` setelah dinaikkan. Tidak ada identitas, tidak ada status "sudah like". |
+| POST | `/public/karya/:code/like` | 404 bila bukan published. Idempoten per pengunjung; balikan `{like_count}` saja. Identitas tidak pernah dikirim balik. |
 
 Urutan pendaftaran route: path statis (`/public/karya/featured`,
 `/public/karya/preview`, `/public/karya/status/:code`) **sebelum** dinamis
@@ -215,10 +225,11 @@ masukan bermusuhan.
   `invitationLimiter` (map + jendela waktu + pembersihan berkala).
 - ID pelacakan dari `crypto/rand`, 6 karakter alfabet tanpa `0/O/1/I`, prefiks
   `KRY-`. Bukan nomor urut, supaya status kiriman lain tidak bisa ditebak.
-- Like: tanpa identitas. Limiter per IP (60/jam, tidak disimpan) hanya untuk
-  menahan skrip, bukan untuk mengenali pengunjung. Angka bisa dinaikkan
-  berulang; itu konsekuensi yang diterima (lihat §7).
-
+- Like: `UNIQUE(karya_id, visitor_hash)` dengan
+  `visitor_hash = sha256(id_pengunjung ‖ ip)`. Identitas hanya untuk deduplikasi
+  dan tidak pernah keluar di respons mana pun.
+  Batas yang diterima: menghapus localStorage atau `curl` menghasilkan pengunjung
+  baru; ditahan limiter per IP (30/jam).
 **Kebocoran data**
 - Halaman status hanya mengembalikan status, judul, dan catatan admin. Markdown,
   gambar, dan IP tidak pernah keluar lewat jalur ini.
@@ -288,9 +299,10 @@ Dicatat supaya bisa dikoreksi saat membaca, bukan dianggap sudah disetujui.
    admin lebih dulu lewat `/admin/himpunan`.
 3. **`review_note` ada**, meski pengirim tidak bisa memperbaiki kirimannya.
    Menolak tanpa alasan membuat orang mengulang kesalahan yang sama.
-4. **`like_count` disimpan sebagai kolom**, bukan dihitung dari tabel like,
-   karena hanya ada angka. Tidak ada tabel like dan tidak ada identitas pemberi
-   like, sesuai permintaan pemilik produk: yang tampil hanya angka.
+4. **`like_count` disimpan sebagai kolom**, bukan dihitung dengan join setiap
+   permintaan, karena ia dipakai untuk urutan daftar dan pemilihan karya
+   unggulan. Baris `karya_like` tetap ada untuk deduplikasi, tetapi identitas
+   pemberi like tidak pernah ditampilkan: antarmuka hanya menampilkan angka.
 5. **Urutan karya unggulan** `like_count DESC, id ASC`: memenuhi "yang likenya
    terbanyak" sekaligus "kiriman pertama" ketika belum ada like sama sekali.
 6. **Ditolak bersifat final.** Mengajukan ulang berarti kiriman baru dengan ID
@@ -338,8 +350,8 @@ Backend (`go test`):
   teks, bukan elemen; link `javascript:` hilang.
 - Transisi status: publish mengisi `published_at`, reject mengosongkannya dan
   mengeluarkan karya dari daftar publik.
-- Like: dua panggilan menaikkan `like_count` dua kali (tanpa dedupe), dan
-  limiter menolak panggilan setelah batas per jam tercapai.
+- Like: dua panggilan dari pengunjung yang sama menaikkan `like_count` sekali;
+  pengunjung berbeda menaikkan lagi; respons tidak pernah memuat identitas.
 - Kiriman tanpa gambar, tanpa centang S&K, atau dengan deskripsi < 50 karakter
   ditolak, dan `terms_version`/`terms_accepted_at` terisi pada kiriman yang sah.
 - `HimpunanService.Delete` menolak dengan pesan yang bisa dibaca admin ketika
