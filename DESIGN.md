@@ -195,13 +195,14 @@ Setiap tabel di PRD §4 dipetakan ke model Go yang embed `orm.BaseModel` (`ID in
 | `division_id` | FK → divisions | |
 | `role_id` | FK → roles | |
 | `status` | enum | `active` \| `inactive` \| `deleted` |
-| `jabatan` | varchar(100) | jabatan di kepengurusan (mis. `Kepala Divisi`); kosong = bukan pengurus |
 | `himpunan_id` | FK → himpunan, nullable | asal himpunan (relasi). `NULL` = belum ditautkan |
 | `asal_himpunan` | varchar(150) | **cadangan teks** asal himpunan: nilai lama hasil impor CSV yang belum ditautkan ke `himpunan`. Yang dibaca UI adalah `himpunan_id`; kolom ini hanya dipakai bila relasi kosong |
 
 Asal himpunan boleh diubah sendiri oleh pemilik akun (`PUT /me` body `himpunan_id`) maupun admin (`PUT /users/:id`). Daftar pilihannya dari `GET /himpunan/options` (semua user login). Diisi pertama kali oleh migrasi `20261123140000_user_himpunan_relasi.sql`, hanya untuk teks yang **cocok persis** dengan `himpunan.name`/`short_label`; sisanya dibiarkan `NULL` supaya admin memilih — menebak kemiripan nama berisiko menautkan orang ke himpunan yang salah.
 
 Auth login: **username** (utama) dan email (fallback).
+
+Jabatan **tidak** punya kolom sendiri: satu sumber kebenaran = `role.name`. Nomor urut yang tidak bisa diwakili role biasa dijadikan role tersendiri (`Koordinator Daerah 1`..`6`). Kolom `user.jabatan` sudah dihapus lewat migrasi `20261123150000_remove_user_jabatan.sql`; nomor urut lama pada "Bendahara Wilayah 1/2" dan "Sekretaris Wilayah 2" tidak dipulihkan karena dua orang memegang jabatan yang sama.
 
 ### 2.4 OrganizationSettings
 Singleton (max 1 row). Service menolak create kedua (409); delete dinonaktifkan.
@@ -325,10 +326,10 @@ Endpoint publik: `GET /public/press_releases?limit=N` (published, maks 50), `GET
 |---|---|---|
 | `Himpunan` (`himpunan`) | `name`(150, wajib), `short_label`(60), `institution`(200), `city`(100), `address`, `email` (format valid bila diisi), `logo_url` (object storage), `is_active`, `sort_order`, `region` (SMALLINT, 0 = belum ditentukan, 1–6 = daerah; migration `20261122140000_himpunan_region.sql` + backfill per kota) | Daftar anggota landing + halaman `/anggota`. Seed awal dari `himpunanList` frontend. Upload logo di field `image`. |
 | `WorkProgram` (`work_program`) | `name`(150, wajib), `description`, `cadence`(50), `is_active`, `sort_order`, `slug`(180, unik, otomatis dari nama saat create; berubah di update hanya bila `slug` dikirim), `category` (`program_kerja`\|`agenda`), `status` (`upcoming`\|`done`), `division_id` (nullable FK `division`, SET NULL), `start_date`/`end_date` (DATE nullable, `end >= start`), `location`(200), `host`(200) | Program kerja & agenda landing + halaman `/program`, `/program/:slug`. Respons API menambah `division_name`; tanggal diformat `"YYYY-MM-DD"` atau `null` (`services.WorkProgramView`). Migration `20261123100000_work_program_detail.sql`. |
-| `Official` (bukan tabel — turunan `user`) | Dibaca dari `user`: `full_name` → `name`, `jabatan` → `role`, `himpunan` → `origin`, `division_id` → `division` (`division.name`), `avatar_url` → `avatar_url`. `himpunan` = `himpunan.short_label` (atau `name` bila kosong) dari relasi `user.himpunan_id`; bila relasi kosong dipakai teks lama `user.asal_himpunan`. Filter: `status = active` DAN `jabatan <> ''` DAN `division_id <> 0`; urut `division_id, id` | Pengurus BPW di section "Pengurus" landing + halaman `/anggota`. Satu orang satu sumber: menonaktifkan/menghapus akun langsung menghilangkan orang itu dari landing. Tab landing = `division` unik (urutan mengikuti `division_id`). Koordinator Daerah N diturunkan dari `role` berpola `Koordinator Daerah <N>`. Dikelola di `/admin/users` — tidak ada CRUD terpisah. Tidak ada migration yang menyentuh tabel `official`; kalau tabel itu masih ada di suatu database, biarkan saja (tidak dibaca kode). |
+| `Official` (bukan tabel — turunan `user`) | Dibaca dari `user`: `full_name` → `name`, `role.name` → `role`, `himpunan` → `origin`, `division_id` → `division` (`division.name`), `avatar_url` → `avatar_url`. `himpunan` = `himpunan.short_label` (atau `name` bila kosong) dari relasi `user.himpunan_id`; bila relasi kosong dipakai teks lama `user.asal_himpunan`. Filter: `status = active` DAN `division_id <> 0` DAN role bukan sistem (Admin); urut `division_id, id` | Pengurus BPW di section "Pengurus" landing + halaman `/anggota`. Satu orang satu sumber: menonaktifkan/menghapus akun langsung menghilangkan orang itu dari landing. Tab landing = `division` unik (urutan mengikuti `division_id`). Koordinator Daerah N diturunkan dari `role` berpola `Koordinator Daerah <N>`. Dikelola di `/admin/users` — tidak ada CRUD terpisah. Tidak ada migration yang menyentuh tabel `official`; kalau tabel itu masih ada di suatu database, biarkan saja (tidak dibaca kode). |
 | `OrganizationSettings.landing_sections` | TEXT JSON object | Key `about, programs, press, members, officials, merch, invitation, cta` -> bool; kosong / key hilang = tampil; hero selalu tampil. Divalidasi di `services/landing_sections.go`; ditulis HANYA lewat `PUT /landing_sections` (permission `landing.manage`; field form `landing_sections` atau body JSON berisi string/objek; hanya kolom itu yang diubah; respons = objek settings), dikembalikan `GET /settings` (publik). `PUT /settings` mengabaikan field ini. Migration `20261122120000_landing_manage_permission.sql`. |
 
-Endpoint: admin `/himpunan[/:id]` (`himpunan.manage`), `/work_programs[/:id]` (`work_program.manage`); publik `GET /public/himpunan`, `GET /public/officials` (turunan `user`, filter aktif + berjabatan, urut `division_id, id`; tanpa fallback statis — fetch gagal = daftar kosong), `GET /public/work_programs` (hanya aktif; query opsional `limit`, `status`, `category`; urut upcoming dulu `start_date` ASC NULL terakhir, lalu done `start_date` DESC NULL terakhir, lalu `sort_order, id`; header `X-Total-Count` = total setelah filter, sebelum limit), `GET /public/work_programs/:slug` (aktif atau 404). Service: `services/himpunan.go`, `services/official.go`, `services/work_program.go`. Migration `20261122100000_himpunan_work_program.sql`.
+Endpoint: admin `/himpunan[/:id]` (`himpunan.manage`), `/work_programs[/:id]` (`work_program.manage`); publik `GET /public/himpunan`, `GET /public/officials` (turunan `user`, filter aktif + role non-sistem, urut `division_id, id`; tanpa fallback statis — fetch gagal = daftar kosong), `GET /public/work_programs` (hanya aktif; query opsional `limit`, `status`, `category`; urut upcoming dulu `start_date` ASC NULL terakhir, lalu done `start_date` DESC NULL terakhir, lalu `sort_order, id`; header `X-Total-Count` = total setelah filter, sebelum limit), `GET /public/work_programs/:slug` (aktif atau 404). Service: `services/himpunan.go`, `services/official.go`, `services/work_program.go`. Migration `20261122100000_himpunan_work_program.sql`.
 
 ### 2.11.2 Akun Pengurus (BPW 26/27)
 
@@ -363,7 +364,7 @@ Endpoint:
 
 | Endpoint | Auth | Catatan |
 |---|---|---|
-| `GET /events/:id/assignees` | `events.view` | Daftar peserta + nama/jabatan/asal himpunan |
+| `GET /events/:id/assignees` | `events.view` | Daftar peserta + nama/role/asal himpunan |
 | `POST /events/:id/assignees` | `events.view` | Body `{user_id?}`. Tanpa `user_id` = self-assign |
 | `DELETE /events/:id/assignees/:userId` | `events.view` | Sendiri boleh; orang lain butuh kewenangan pengelola event |
 

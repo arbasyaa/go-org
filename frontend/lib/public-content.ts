@@ -7,7 +7,7 @@
  *     GET /public/press_releases?limit=N   -> PressRelease[] (hanya published, terbaru dulu)
  *     GET /public/press_releases/:slug     -> PressRelease (404 bila draft / tidak ada)
  *     GET /public/himpunan                 -> HimpunanItem[] (is_active, urut sort_order)
- *     GET /public/officials                -> OfficialItem[] (dari tabel user: aktif + punya jabatan)
+ *     GET /public/officials                -> OfficialItem[] (dari tabel user: aktif + role non-sistem)
  *     GET /public/work_programs            -> WorkProgramItem[] (is_active; ?limit=&status=&category=; header X-Total-Count)
  *     GET /public/work_programs/:slug      -> WorkProgramItem (404 bila nonaktif / tidak ada)
  *     GET /public/merch                    -> MerchItem[] (hanya is_active, urut sort_order)

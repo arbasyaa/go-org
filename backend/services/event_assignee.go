@@ -58,12 +58,20 @@ func (EventService) Unassign(ctx context.Context, eventID, userID int64) error {
 
 // Assignees mengembalikan daftar peserta sebuah event, selalu array (bukan
 // nil) supaya UI tidak perlu mengecek null. Setiap baris memuat nama,
-// asal himpunan, dan jabatan user agar bisa langsung ditampilkan.
+// asal himpunan, dan jabatan (= nama role) agar bisa langsung ditampilkan.
 func (EventService) Assignees(ctx context.Context, eventID int64) ([]map[string]any, error) {
 	rows, err := orm.Objects[models.EventAssignee](ctx).
 		Filter("event_id", eventID).OrderBy("id").All()
 	if err != nil {
 		return nil, err
+	}
+	roles, err := orm.Objects[models.Role](ctx).All()
+	if err != nil {
+		return nil, err
+	}
+	roleNames := make(map[int64]string, len(roles))
+	for _, r := range roles {
+		roleNames[r.ID] = r.Name
 	}
 	out := make([]map[string]any, 0, len(rows))
 	userCache := map[int64]*models.User{}
@@ -86,7 +94,7 @@ func (EventService) Assignees(ctx context.Context, eventID int64) ([]map[string]
 			entry["full_name"] = u.FullName
 			entry["username"] = u.Username
 			entry["asal_himpunan"] = himpunanName(ctx, u)
-			entry["jabatan"] = u.Jabatan
+			entry["role"] = roleNames[u.RoleID]
 			entry["avatar_url"] = u.AvatarURL
 		}
 		out = append(out, entry)

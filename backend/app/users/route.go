@@ -39,7 +39,6 @@ func POST(ctx *views.Context) error {
 			FullName     string `json:"full_name"`
 			DivisionID   int64  `json:"division_id"`
 			RoleID       int64  `json:"role_id"`
-			Jabatan      string `json:"jabatan"`
 			AsalHimpunan string `json:"asal_himpunan"`
 		}
 		if err := c.Bind(&body); err != nil {
@@ -48,7 +47,7 @@ func POST(ctx *views.Context) error {
 		u, err := services.UserService{}.Create(c.Request.Context(), &models.User{
 			Username: body.Username, Email: body.Email, FullName: body.FullName,
 			DivisionID: body.DivisionID, RoleID: body.RoleID,
-			Jabatan: body.Jabatan, AsalHimpunan: body.AsalHimpunan,
+			AsalHimpunan: body.AsalHimpunan,
 		}, body.Password)
 		if err != nil {
 			return c.Error(500, err.Error())

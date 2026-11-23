@@ -37,7 +37,8 @@ export interface EventAssignee {
   full_name?: string | null
   username?: string | null
   asal_himpunan?: string | null
-  jabatan?: string | null
+  /** Nama role = jabatan (satu sumber, kolom user.jabatan sudah dihapus). */
+  role?: string | null
   avatar_url?: string | null
   created_at?: string
 }

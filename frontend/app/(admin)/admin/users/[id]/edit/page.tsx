@@ -101,7 +101,6 @@ export default function EditUserPage({
           division_id: user.division_id,
           role_id: user.role_id,
           status: user.status,
-          jabatan: user.jabatan,
           asal_himpunan: user.asal_himpunan,
           himpunan_id: user.himpunan_id ?? null,
         },
@@ -220,15 +219,6 @@ export default function EditUserPage({
                         value={user.full_name}
                         onChange={(e) =>
                           setForm({ ...user, full_name: e.target.value })
-                        }
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel>Jabatan</FieldLabel>
-                      <Input
-                        value={user.jabatan ?? ""}
-                        onChange={(e) =>
-                          setForm({ ...user, jabatan: e.target.value })
                         }
                       />
                     </Field>

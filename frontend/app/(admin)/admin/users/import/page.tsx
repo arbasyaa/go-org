@@ -26,7 +26,6 @@ const TEMPLATE_COLUMNS = [
   ["password", "Tidak", "kosongkan = changeme123"],
   ["phone", "Tidak", "081234567890"],
   ["hometown", "Tidak", "Daerah 3"],
-  ["jabatan", "Tidak", "Kepala Divisi"],
   ["asal_himpunan", "Tidak", "HIMATIF UMNU"],
 ] as const
 
@@ -53,7 +52,6 @@ export default function ImportUsersPage() {
           "password",
           "phone",
           "hometown",
-          "jabatan",
           "asal_himpunan",
         ],
         [
@@ -65,7 +63,6 @@ export default function ImportUsersPage() {
           "Rahasia123",
           "081234567890",
           "Semarang",
-          "Anggota Divisi",
           "HIMATIF UMNU",
         ],
       ]

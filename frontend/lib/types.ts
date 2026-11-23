@@ -14,7 +14,6 @@ export interface User {
   full_name: string
   birth_date?: string | null
   hometown?: string | null
-  jabatan?: string | null
   asal_himpunan?: string | null
   /** Relasi asal himpunan ke tabel himpunan; null = belum ditautkan. */
   himpunan_id?: number | null

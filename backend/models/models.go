@@ -99,7 +99,6 @@ type User struct {
 	FullName     string                  `orm:"size:150" json:"full_name"`
 	BirthDate    *time.Time              `orm:"null" json:"birth_date,omitempty"`
 	Hometown     string                  `orm:"size:100" json:"hometown"`
-	Jabatan      string                  `orm:"size:100" json:"jabatan"`
 	AsalHimpunan string                  `orm:"size:150" json:"asal_himpunan"`
 	// Himpunan = relasi asal himpunan (sumber kebenaran). AsalHimpunan tetap
 	// disimpan sebagai teks untuk nilai lama yang belum ditautkan admin.

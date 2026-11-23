@@ -11,7 +11,9 @@ import (
 )
 
 // ListActive membaca pengurus dari tabel user, jadi menonaktifkan / menghapus
-// akun harus langsung menghilangkan orang itu dari landing page.
+// akun harus langsung menghilangkan orang itu dari landing page. Jabatan diambil
+// dari nama role (kolom `jabatan` sudah dihapus), dan role sistem (Admin) tidak
+// dianggap pengurus.
 func TestOfficialListActiveFromUsers(t *testing.T) {
 	if os.Getenv("BACKUP_RESTORE_INTEGRATION") != "1" {
 		t.Skip("set BACKUP_RESTORE_INTEGRATION=1 and GOKIL_DB_DSN to run (writes to DB)")
@@ -39,12 +41,12 @@ func TestOfficialListActiveFromUsers(t *testing.T) {
 	}
 	defer orm.DeleteByID[models.Role](ctx, role.ID)
 
-	mkUser := func(suffix, jabatan string, divID int64) *models.User {
+	mkUser := func(suffix string, divID, roleID int64) *models.User {
 		t.Helper()
 		u, err := orm.Create(ctx, &models.User{
 			Username: "uji.pengurus." + suffix, Email: "uji.pengurus." + suffix + "@test.local",
-			FullName: "Uji " + suffix, Jabatan: jabatan, AsalHimpunan: "HIMTI UNSIQ",
-			DivisionID: divID, RoleID: role.ID, Status: "active",
+			FullName: "Uji " + suffix, AsalHimpunan: "HIMTI UNSIQ",
+			DivisionID: divID, RoleID: roleID, Status: "active",
 		})
 		if err != nil {
 			t.Fatalf("create user %s: %v", suffix, err)
@@ -53,12 +55,18 @@ func TestOfficialListActiveFromUsers(t *testing.T) {
 		return u
 	}
 
-	pengurus := mkUser("pengurus", "Kepala Divisi", division.ID)
-	inactive := mkUser("nonaktif", "Anggota Divisi", division.ID)
+	systemRole, err := orm.Create(ctx, &models.Role{Name: "Uji Sistem Role", IsSystem: true})
+	if err != nil {
+		t.Fatalf("create system role: %v", err)
+	}
+	defer orm.DeleteByID[models.Role](ctx, systemRole.ID)
+
+	pengurus := mkUser("pengurus", division.ID, role.ID)
+	inactive := mkUser("nonaktif", division.ID, role.ID)
 	if _, err := orm.UpdateByID[models.User](ctx, inactive.ID, map[string]any{"status": "deleted"}); err != nil {
 		t.Fatalf("soft delete: %v", err)
 	}
-	noJabatan := mkUser("tanpajabatan", "", division.ID)
+	akunSistem := mkUser("sistem", division.ID, systemRole.ID)
 
 	find := func(list []OfficialView, id int64) *OfficialView {
 		for i := range list {
@@ -78,14 +86,14 @@ func TestOfficialListActiveFromUsers(t *testing.T) {
 	if got == nil {
 		t.Fatal("pengurus aktif harus muncul di landing")
 	}
-	if got.Name != pengurus.FullName || got.Role != pengurus.Jabatan ||
+	if got.Name != pengurus.FullName || got.Role != role.Name ||
 		got.Origin != pengurus.AsalHimpunan || got.Division != division.Name {
 		t.Errorf("field tidak terpetakan: %+v", got)
 	}
 	if find(list, inactive.ID) != nil {
 		t.Error("user nonaktif masih muncul di landing")
 	}
-	if find(list, noJabatan.ID) != nil {
-		t.Error("user tanpa jabatan tidak boleh dianggap pengurus")
+	if find(list, akunSistem.ID) != nil {
+		t.Error("pemegang role sistem tidak boleh dianggap pengurus")
 	}
 }

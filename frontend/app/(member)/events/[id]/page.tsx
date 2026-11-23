@@ -280,7 +280,7 @@ export default function EventDetailPage({
                           </span>
                           <span className="block truncate text-xs text-muted-foreground">
                             {[
-                              a.jabatan,
+                              a.role,
                               a.asal_himpunan,
                               a.self_assigned ? "mendaftar sendiri" : null,
                             ]

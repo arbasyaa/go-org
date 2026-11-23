@@ -111,7 +111,7 @@ func userPayload(ctx context.Context, u *models.User) map[string]any {
 		"full_name": u.FullName, "avatar_url": u.AvatarURL,
 		"division_id": u.DivisionID, "role_id": u.RoleID, "status": u.Status,
 		"hometown": u.Hometown, "phone": u.Phone,
-		"jabatan": u.Jabatan, "asal_himpunan": u.AsalHimpunan,
+		"asal_himpunan": u.AsalHimpunan,
 		"himpunan_id": u.HimpunanID,
 	}
 	if u.BirthDate != nil {
@@ -267,7 +267,7 @@ func enrichUsers(ctx context.Context, users []*models.User) []map[string]any {
 			"division_id": u.DivisionID, "role_id": u.RoleID, "status": u.Status,
 			"created_at": u.CreatedAt, "updated_at": u.UpdatedAt,
 			"phone": u.Phone, "hometown": u.Hometown,
-			"jabatan": u.Jabatan, "asal_himpunan": u.AsalHimpunan,
+			"asal_himpunan": u.AsalHimpunan,
 			"himpunan_id": u.HimpunanID,
 		}
 		if u.HimpunanID != nil {
@@ -311,7 +311,21 @@ func (UserService) Create(ctx context.Context, u *models.User, password string) 
 }
 
 func (UserService) Update(ctx context.Context, id int64, values map[string]any) (*models.User, error) {
-	delete(values, "password_hash")
+	// Whitelist: body datang dari klien, jadi kolom seperti password_hash, id,
+	// created_at, atau nama kolom yang sudah tidak ada (mis. jabatan) tidak boleh
+	// ikut ditulis ke SQL.
+	allowed := map[string]bool{
+		"full_name": true, "email": true, "division_id": true, "role_id": true,
+		"status": true, "phone": true, "hometown": true, "avatar_url": true,
+		"birth_date": true, "himpunan_id": true, "asal_himpunan": true,
+	}
+	clean := map[string]any{}
+	for k, v := range values {
+		if allowed[k] {
+			clean[k] = v
+		}
+	}
+	values = clean
 	if v, ok := values["himpunan_id"]; ok {
 		hid, err := optionalID(v)
 		if err != nil {
@@ -400,7 +414,7 @@ func (UserService) ImportCSV(ctx context.Context, rows []map[string]string) (suc
 		_, err := UserService{}.Create(ctx, &models.User{
 			Username: row["username"], Email: row["email"], FullName: row["full_name"],
 			DivisionID: divs[0].ID, RoleID: roles[0].ID, Phone: row["phone"],
-			Hometown: row["hometown"], Jabatan: row["jabatan"], AsalHimpunan: row["asal_himpunan"],
+			Hometown: row["hometown"], AsalHimpunan: row["asal_himpunan"],
 			HimpunanID: himpunanID,
 		}, pwd)
 		if err != nil {
