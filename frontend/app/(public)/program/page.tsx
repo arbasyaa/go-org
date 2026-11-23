@@ -7,7 +7,10 @@ export const metadata = {
   description: "Program kerja dan agenda kegiatan PERMIKOMNAS Wilayah VII Jawa Tengah.",
 }
 
-export const revalidate = 60
+// Konten dikelola lewat admin: halaman ini dirender per request supaya
+// perubahan (pengurus, program, berita, merch) langsung terlihat, tanpa
+// menunggu revalidate dan tanpa perlu redeploy.
+export const dynamic = "force-dynamic"
 
 /** /program: seluruh program kerja & agenda aktif, filter status/kategori di klien. */
 export default async function ProgramIndexPage() {

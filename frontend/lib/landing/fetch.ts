@@ -28,7 +28,7 @@ const BASE = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8080"
  */
 async function publicGet<T>(path: string, fallback: T): Promise<T> {
   try {
-    const res = await fetch(`${BASE}${path}`, { next: { revalidate: 60 } })
+    const res = await fetch(`${BASE}${path}`, { cache: "no-store" })
     if (!res.ok) return fallback
     const body = (await res.json()) as { data?: T }
     return body.data ?? fallback
@@ -56,7 +56,7 @@ export function getMerch() {
 /** Seperti publicGet, tetapi `null` bila fetch GAGAL (beda dengan sukses berisi []). */
 async function publicGetOrNull<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE}${path}`, { next: { revalidate: 60 } })
+    const res = await fetch(`${BASE}${path}`, { cache: "no-store" })
     if (!res.ok) return null
     const body = (await res.json()) as { data?: T }
     return body.data ?? null
@@ -159,7 +159,7 @@ export async function getWorkPrograms(
   const qs = params.toString()
   try {
     const res = await fetch(`${BASE}/public/work_programs${qs ? `?${qs}` : ""}`, {
-      next: { revalidate: 60 },
+      cache: "no-store",
     })
     if (!res.ok) throw new Error(String(res.status))
     const body = (await res.json()) as { data?: WorkProgramItem[] }

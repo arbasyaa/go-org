@@ -8,7 +8,10 @@ export const metadata = {
   description: "Daftar himpunan anggota PERMIKOMNAS Wilayah VII Jawa Tengah, dikelompokkan per daerah.",
 }
 
-export const revalidate = 60
+// Konten dikelola lewat admin: halaman ini dirender per request supaya
+// perubahan (pengurus, program, berita, merch) langsung terlihat, tanpa
+// menunggu revalidate dan tanpa perlu redeploy.
+export const dynamic = "force-dynamic"
 
 /** /anggota: seluruh himpunan anggota aktif, per daerah, dengan pencarian klien. */
 export default async function AnggotaPage() {

@@ -35,8 +35,10 @@ const organizationJsonLd = {
   },
 }
 
-// Berita & merch dikelola lewat CRUD: render ulang paling lambat tiap 60 detik.
-export const revalidate = 60
+// Konten dikelola lewat admin: halaman ini dirender per request supaya
+// perubahan (pengurus, program, berita, merch) langsung terlihat, tanpa
+// menunggu revalidate dan tanpa perlu redeploy.
+export const dynamic = "force-dynamic"
 
 /** Maksimum kartu program di landing; selebihnya lewat /program. */
 const PROGRAM_LIMIT = 5

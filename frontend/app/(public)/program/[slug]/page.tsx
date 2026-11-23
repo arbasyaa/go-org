@@ -6,7 +6,10 @@ import { ProgramBadges } from "@/components/landing/program-badges"
 import { getWorkProgram } from "@/lib/landing/fetch"
 import { formatProgramDate } from "@/lib/landing/program"
 
-export const revalidate = 60
+// Konten dikelola lewat admin: halaman ini dirender per request supaya
+// perubahan (pengurus, program, berita, merch) langsung terlihat, tanpa
+// menunggu revalidate dan tanpa perlu redeploy.
+export const dynamic = "force-dynamic"
 
 type Props = { params: Promise<{ slug: string }> }
 

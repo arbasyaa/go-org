@@ -7,7 +7,10 @@ export const metadata = {
   description: "Katalog merchandise resmi PERMIKOMNAS Wilayah VII Jawa Tengah.",
 }
 
-export const revalidate = 60
+// Konten dikelola lewat admin: halaman ini dirender per request supaya
+// perubahan (pengurus, program, berita, merch) langsung terlihat, tanpa
+// menunggu revalidate dan tanpa perlu redeploy.
+export const dynamic = "force-dynamic"
 
 /** /merch: katalog lengkap dengan filter kategori (client). */
 export default async function MerchPage() {

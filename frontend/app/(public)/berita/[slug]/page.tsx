@@ -7,7 +7,10 @@ import { getPressRelease } from "@/lib/landing/fetch"
 import { org } from "@/lib/landing/content"
 import { storageUrl } from "@/lib/storage-url"
 
-export const revalidate = 60
+// Konten dikelola lewat admin: halaman ini dirender per request supaya
+// perubahan (pengurus, program, berita, merch) langsung terlihat, tanpa
+// menunggu revalidate dan tanpa perlu redeploy.
+export const dynamic = "force-dynamic"
 
 type Props = { params: Promise<{ slug: string }> }
 

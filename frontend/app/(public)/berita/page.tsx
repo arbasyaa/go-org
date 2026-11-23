@@ -9,7 +9,10 @@ export const metadata = {
   description: "Siaran pers dan kabar resmi PERMIKOMNAS Wilayah VII Jawa Tengah.",
 }
 
-export const revalidate = 60
+// Konten dikelola lewat admin: halaman ini dirender per request supaya
+// perubahan (pengurus, program, berita, merch) langsung terlihat, tanpa
+// menunggu revalidate dan tanpa perlu redeploy.
+export const dynamic = "force-dynamic"
 
 /** /berita: arsip seluruh press release terbit, grid editorial 2 kolom. */
 export default async function PressIndexPage() {
