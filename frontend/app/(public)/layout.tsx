@@ -1,4 +1,4 @@
-import { Bricolage_Grotesque, Instrument_Sans } from "next/font/google"
+import localFont from "next/font/local"
 import { LandingMotion } from "@/components/landing/landing-motion"
 import { SiteFooter } from "@/components/landing/site-footer"
 import { SiteHeader } from "@/components/landing/site-header"
@@ -8,16 +8,15 @@ import { getLandingSections } from "@/lib/landing/fetch"
 
 // Font khusus halaman publik: dimuat (dan di-preload) hanya di route (public),
 // bukan di portal/login. Display: Bricolage Grotesque; body: Instrument Sans.
-const bricolage = Bricolage_Grotesque({
+// Di-host sendiri (fonts/*.woff2) supaya `next build` tidak perlu jaringan.
+const bricolage = localFont({
+  src: "../../fonts/bricolage.woff2",
   variable: "--font-bricolage",
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "800"],
   display: "swap",
 })
-const instrumentSans = Instrument_Sans({
+const instrumentSans = localFont({
+  src: "../../fonts/instrument-sans.woff2",
   variable: "--font-instrument-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
   display: "swap",
 })
 

@@ -1,12 +1,5 @@
 import type { Metadata } from "next"
-import {
-  Inter,
-  Lora,
-  Manrope,
-  Plus_Jakarta_Sans,
-  Poppins,
-  Space_Grotesk,
-} from "next/font/google"
+import localFont from "next/font/local"
 import { Toaster } from "@/components/ui/sonner"
 import { AppearanceSync } from "@/components/appearance-sync"
 import { AuthProvider } from "@/components/providers/auth-provider"
@@ -16,40 +9,50 @@ import "./globals.css"
 
 // Semua font pilihan kustomisasi tampilan dimuat dengan variabel masing-masing;
 // mapping ke --font-sans/--font-heading terjadi di globals.css + lib/appearance.
-const inter = Inter({
+//
+// File font di-host sendiri (fonts/*.woff2, subset latin) lewat next/font/local,
+// BUKAN next/font/google: versi google mengunduh font saat `next build`, dan di
+// container build tanpa akses ke fonts.googleapis.com seluruh build gagal
+// ("module not found ... instrument_sans.module.css"). Dengan file lokal, build
+// tidak butuh jaringan sama sekali.
+const inter = localFont({
+  src: "../fonts/inter.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
   display: "swap",
 })
-const poppins = Poppins({
+const poppins = localFont({
+  src: [
+    { path: "../fonts/poppins-400.woff2", weight: "400" },
+    { path: "../fonts/poppins-500.woff2", weight: "500" },
+    { path: "../fonts/poppins-600.woff2", weight: "600" },
+    { path: "../fonts/poppins-700.woff2", weight: "700" },
+  ],
   variable: "--font-poppins",
   preload: false,
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
 })
-const manrope = Manrope({
+const manrope = localFont({
+  src: "../fonts/manrope.woff2",
   variable: "--font-manrope",
   preload: false,
-  subsets: ["latin"],
   display: "swap",
 })
-const spaceGrotesk = Space_Grotesk({
+const spaceGrotesk = localFont({
+  src: "../fonts/space-grotesk.woff2",
   variable: "--font-space-grotesk",
   preload: false,
-  subsets: ["latin"],
   display: "swap",
 })
-const jakarta = Plus_Jakarta_Sans({
+const jakarta = localFont({
+  src: "../fonts/jakarta.woff2",
   variable: "--font-jakarta",
   preload: false,
-  subsets: ["latin"],
   display: "swap",
 })
-const lora = Lora({
+const lora = localFont({
+  src: "../fonts/lora.woff2",
   variable: "--font-lora",
   preload: false,
-  subsets: ["latin"],
   display: "swap",
 })
 
