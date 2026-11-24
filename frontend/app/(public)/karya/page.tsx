@@ -71,9 +71,6 @@ export default async function KaryaIndexPage({ searchParams }: Props) {
           </details>
           <div className="mt-4 hidden md:block">
             <HimpunanFilter himpunan={himpunan} activeID={himpunanID} sort={sort} />
-            <p className="mt-3 font-[family-name:var(--font-landing-body)] text-xs text-[var(--landing-ink-muted)]">
-              Arahkan kursor ke nama himpunan untuk melihat nama kampusnya.
-            </p>
           </div>
 
           {list.items.length ? (
