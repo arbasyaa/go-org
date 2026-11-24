@@ -34,6 +34,7 @@ func init() {
 		&MerchItem{},
 		&Himpunan{},
 		&Karya{},
+		&KaryaImage{},
 		&KaryaLike{},
 		&WorkProgram{},
 		&EventAssignee{},
@@ -490,9 +491,9 @@ type Karya struct {
 	Himpunan   orm.BelongsTo[Himpunan] `json:"-"`
 	HimpunanID int64                   `orm:"index" json:"himpunan_id"`
 	RepoURL    string                  `orm:"size:512" json:"repo_url"`
-	// AboutMD disimpan apa adanya; HTML-nya dirender saat dibaca.
-	AboutMD  string `orm:"type:text" json:"about_md,omitempty"`
-	ImageURL string `orm:"size:512" json:"image_url"`
+	// AboutMD disimpan apa adanya; HTML-nya dirender saat dibaca. Foto ada di
+	// tabel karya_image (sampai 5 per karya).
+	AboutMD string `orm:"type:text" json:"about_md,omitempty"`
 	// review | published | rejected
 	Status      string     `orm:"size:20;default:review" json:"status"`
 	ReviewNote  string     `orm:"size:500" json:"review_note"`
@@ -501,6 +502,15 @@ type Karya struct {
 	// Persetujuan S&K: versi teks yang dicentang + waktunya.
 	TermsVersion    string     `orm:"size:20" json:"terms_version"`
 	TermsAcceptedAt *time.Time `orm:"null" json:"terms_accepted_at,omitempty"`
+}
+
+// KaryaImage: sampai 5 foto per karya, urut sort_order.
+type KaryaImage struct {
+	orm.BaseModel
+	Karya     orm.BelongsTo[Karya] `json:"-"`
+	KaryaID   int64                `orm:"index" json:"karya_id"`
+	URL       string               `orm:"size:512" json:"url"`
+	SortOrder int                  `orm:"default:0" json:"sort_order"`
 }
 
 // KaryaLike: satu baris per pengunjung per karya, hanya untuk menahan like

@@ -99,9 +99,9 @@ func TestNewKaryaCode(t *testing.T) {
 func TestValidateKaryaInput(t *testing.T) {
 	base := KaryaSubmitInput{
 		Title: "Repo Uji", AuthorName: "Pengirim Uji", HimpunanID: 1,
-		RepoURL:  "https://github.com/a/b",
-		AboutMD:  strings.Repeat("a", KaryaMinAboutChars),
-		ImageURL: "karya/image.webp",
+		RepoURL:   "https://github.com/a/b",
+		AboutMD:   strings.Repeat("a", KaryaMinAboutChars),
+		ImageURLs: []string{"karya/image.webp"},
 	}
 	if _, err := base.validate(); err != nil {
 		t.Fatalf("input sah ditolak: %v", err)
@@ -114,7 +114,8 @@ func TestValidateKaryaInput(t *testing.T) {
 		"tanpa himpunan":       func(i *KaryaSubmitInput) { i.HimpunanID = 0 },
 		"about pendek":         func(i *KaryaSubmitInput) { i.AboutMD = "pendek" },
 		"about kepanjangan":    func(i *KaryaSubmitInput) { i.AboutMD = strings.Repeat("a", KaryaMaxAboutChars+1) },
-		"tanpa gambar":         func(i *KaryaSubmitInput) { i.ImageURL = "" },
+		"tanpa gambar":         func(i *KaryaSubmitInput) { i.ImageURLs = nil },
+		"foto kebanyakan":      func(i *KaryaSubmitInput) { i.ImageURLs = []string{"1", "2", "3", "4", "5", "6"} },
 		"repo bukan github":    func(i *KaryaSubmitInput) { i.RepoURL = "https://gitlab.com/a/b" },
 	}
 	for name, mutate := range mutations {

@@ -13,10 +13,10 @@ export function KaryaCard({ karya, priority = false }: { karya: Karya; priority?
       className="group flex flex-col overflow-hidden rounded-[var(--landing-radius-md)] border border-[var(--landing-ink)]/12 bg-[var(--landing-paper-raised)] no-underline transition-colors duration-500 hover:border-[var(--landing-ink)]/40"
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-[var(--landing-ink)]/10">
-        {karya.image_url ? (
+        {karya.images[0] ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={storageUrl(karya.image_url)}
+            src={storageUrl(karya.images[0])}
             alt=""
             loading={priority ? "eager" : "lazy"}
             decoding="async"

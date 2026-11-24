@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { KaryaLike } from "@/components/landing/karya-like"
+import { KaryaGallery } from "@/components/landing/karya-gallery"
 import { getKaryaByCode } from "@/lib/karya"
-import { storageUrl } from "@/lib/storage-url"
 
 export const dynamic = "force-dynamic"
 
@@ -38,8 +38,8 @@ export default async function KaryaDetailPage({ params }: Props) {
           </ol>
         </nav>
 
-        <div className="mt-8 grid gap-10 md:grid-cols-12 md:gap-12">
-          <div className="md:col-span-7">
+        <div className="mt-8">
+          <div className="max-w-[52rem]">
             <p className="font-[family-name:var(--font-landing-label)] text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--landing-accent-deep)]">
               {karya.himpunan}
             </p>
@@ -61,14 +61,6 @@ export default async function KaryaDetailPage({ params }: Props) {
               <KaryaLike code={karya.code} initial={karya.like_count} />
             </div>
           </div>
-          <div className="md:col-span-5">
-            {karya.image_url ? (
-              <div className="overflow-hidden rounded-[var(--landing-radius-md)] border border-[var(--landing-ink)]/12">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={storageUrl(karya.image_url)} alt="" className="w-full object-cover" />
-              </div>
-            ) : null}
-          </div>
         </div>
 
         <div className="mt-14 grid gap-10 border-t border-[var(--landing-ink)]/15 pt-10 md:grid-cols-12">
@@ -76,7 +68,15 @@ export default async function KaryaDetailPage({ params }: Props) {
             {/* HTML dari RenderKaryaMarkdown: goldmark tanpa raw HTML + SanitizeHTML. */}
             <div className="landing-prose" dangerouslySetInnerHTML={{ __html: karya.about_html ?? "" }} />
           </div>
-          <aside className="md:col-span-4">
+          <aside className="space-y-6 md:col-span-4">
+            <div>
+              <p className="font-[family-name:var(--font-landing-label)] text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-[var(--landing-ink-muted)]">
+                Foto {karya.images.length > 1 ? `(${karya.images.length})` : ""}
+              </p>
+              <div className="mt-3">
+                <KaryaGallery images={karya.images} title={karya.title} />
+              </div>
+            </div>
             <dl className="space-y-3 rounded-[var(--landing-radius-md)] border border-[var(--landing-ink)]/12 bg-[var(--landing-paper-raised)] p-5 font-[family-name:var(--font-landing-body)] text-sm">
               <div>
                 <dt className="font-[family-name:var(--font-landing-label)] text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-[var(--landing-ink-muted)]">Pengirim</dt>

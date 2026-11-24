@@ -33,6 +33,10 @@ const (
 	KaryaMaxTitleChars  = 150
 	KaryaMaxAuthorChars = 150
 	KaryaMaxNoteChars   = 500
+	// Satu foto wajib (kartu tanpa gambar terlihat seperti daftar tautan),
+	// maksimal lima supaya unggahan tetap ringan.
+	KaryaMinImages = 1
+	KaryaMaxImages = 5
 )
 
 // ErrKaryaNotFound dipakai handler untuk membedakan 404 dari kesalahan lain.
@@ -43,28 +47,28 @@ var karyaStatuses = map[string]bool{"review": true, "published": true, "rejected
 
 type KaryaService struct{}
 
-// KaryaSubmitInput = isi form pengajuan. ImageURL diisi route setelah gambar
-// divalidasi dan diunggah, bukan dikirim mentah oleh klien.
+// KaryaSubmitInput = isi form pengajuan. ImageURLs diisi route setelah setiap
+// gambar divalidasi dan diunggah, bukan dikirim mentah oleh klien.
 type KaryaSubmitInput struct {
 	Title      string
 	AuthorName string
 	HimpunanID int64
 	RepoURL    string
 	AboutMD    string
-	ImageURL   string
+	ImageURLs  []string
 }
 
 // KaryaView = bentuk yang dikirim ke klien publik.
 type KaryaView struct {
-	ID         int64  `json:"id"`
-	Code       string `json:"code"`
-	Title      string `json:"title"`
-	AuthorName string `json:"author_name"`
-	Himpunan   string `json:"himpunan"`
-	HimpunanID int64  `json:"himpunan_id"`
-	RepoURL    string `json:"repo_url"`
-	ImageURL   string `json:"image_url"`
-	AboutHTML  string `json:"about_html,omitempty"`
+	ID         int64    `json:"id"`
+	Code       string   `json:"code"`
+	Title      string   `json:"title"`
+	AuthorName string   `json:"author_name"`
+	Himpunan   string   `json:"himpunan"`
+	HimpunanID int64    `json:"himpunan_id"`
+	RepoURL    string   `json:"repo_url"`
+	Images     []string `json:"images"`
+	AboutHTML  string   `json:"about_html,omitempty"`
 	// AboutMD hanya diisi untuk admin (halaman kurasi), tidak untuk publik.
 	AboutMD     string     `json:"about_md,omitempty"`
 	Status      string     `json:"status"`
@@ -149,8 +153,8 @@ func (in KaryaSubmitInput) validate() (KaryaSubmitInput, error) {
 	if n := len([]rune(in.AboutMD)); n < KaryaMinAboutChars || n > KaryaMaxAboutChars {
 		return in, fmt.Errorf("tentang karya harus %d-%d karakter", KaryaMinAboutChars, KaryaMaxAboutChars)
 	}
-	if strings.TrimSpace(in.ImageURL) == "" {
-		return in, fmt.Errorf("foto karya wajib diunggah")
+	if n := len(in.ImageURLs); n < KaryaMinImages || n > KaryaMaxImages {
+		return in, fmt.Errorf("foto karya harus %d-%d gambar", KaryaMinImages, KaryaMaxImages)
 	}
 	url, err := NormalizeRepoURL(in.RepoURL)
 	if err != nil {
@@ -196,7 +200,7 @@ func (KaryaService) Submit(ctx context.Context, in KaryaSubmitInput) (*models.Ka
 	m := &models.Karya{
 		Title: in.Title, AuthorName: in.AuthorName,
 		HimpunanID: in.HimpunanID, RepoURL: in.RepoURL,
-		AboutMD: in.AboutMD, ImageURL: in.ImageURL,
+		AboutMD:      in.AboutMD,
 		Status:       "review",
 		TermsVersion: KaryaTermsVersion, TermsAcceptedAt: &now,
 	}
@@ -213,7 +217,18 @@ func (KaryaService) Submit(ctx context.Context, in KaryaSubmitInput) (*models.Ka
 		if existing != nil {
 			continue
 		}
-		return orm.Create(ctx, m)
+		created, err := orm.Create(ctx, m)
+		if err != nil {
+			return nil, err
+		}
+		for i, url := range in.ImageURLs {
+			if _, err := orm.Create(ctx, &models.KaryaImage{
+				KaryaID: created.ID, URL: url, SortOrder: i,
+			}); err != nil {
+				return nil, err
+			}
+		}
+		return created, nil
 	}
 	return nil, fmt.Errorf("gagal membuat kode karya, coba lagi")
 }
@@ -317,11 +332,28 @@ func himpunanNames(ctx context.Context) map[int64]string {
 	return out
 }
 
-func toKaryaView(k *models.Karya, names map[int64]string) KaryaView {
+// imagesOf: foto per karya dipetakan sekali untuk satu halaman, bukan query per
+// baris (katalog bisa puluhan kartu).
+func imagesOf(ctx context.Context, ids []int64) map[int64][]string {
+	out := map[int64][]string{}
+	if len(ids) == 0 {
+		return out
+	}
+	rows, err := orm.Objects[models.KaryaImage](ctx).Filter("karya_id__in", ids).OrderBy("sort_order", "id").All()
+	if err != nil {
+		return out
+	}
+	for _, img := range rows {
+		out[img.KaryaID] = append(out[img.KaryaID], img.URL)
+	}
+	return out
+}
+
+func toKaryaView(k *models.Karya, names map[int64]string, images []string) KaryaView {
 	return KaryaView{
 		ID: k.ID, Code: k.Code, Title: k.Title, AuthorName: k.AuthorName,
 		Himpunan: names[k.HimpunanID], HimpunanID: k.HimpunanID,
-		RepoURL: k.RepoURL, ImageURL: k.ImageURL,
+		RepoURL: k.RepoURL, Images: images,
 		Status: k.Status, ReviewNote: k.ReviewNote, LikeCount: k.LikeCount,
 		PublishedAt: k.PublishedAt, CreatedAt: k.CreatedAt,
 	}
@@ -349,9 +381,14 @@ func (KaryaService) ListPublic(ctx context.Context, himpunanID int64, sort strin
 		return nil, 0, err
 	}
 	names := himpunanNames(ctx)
+	ids := make([]int64, len(rows))
+	for i, k := range rows {
+		ids[i] = k.ID
+	}
+	images := imagesOf(ctx, ids)
 	out := make([]KaryaView, len(rows))
 	for i, k := range rows {
-		out[i] = toKaryaView(k, names)
+		out[i] = toKaryaView(k, names, images[k.ID])
 	}
 	return out, int(total), nil
 }
@@ -371,7 +408,7 @@ func (KaryaService) PublicByCode(ctx context.Context, code string) (*KaryaView, 
 	if err != nil || k == nil || k.Status != "published" {
 		return nil, ErrKaryaNotFound
 	}
-	v := toKaryaView(k, himpunanNames(ctx))
+	v := toKaryaView(k, himpunanNames(ctx), imagesOf(ctx, []int64{k.ID})[k.ID])
 	v.AboutHTML = RenderKaryaMarkdown(k.AboutMD)
 	return &v, nil
 }
@@ -404,7 +441,7 @@ func (KaryaService) ByID(ctx context.Context, id int64) (*KaryaView, error) {
 	if err != nil {
 		return nil, ErrKaryaNotFound
 	}
-	v := toKaryaView(k, himpunanNames(ctx))
+	v := toKaryaView(k, himpunanNames(ctx), imagesOf(ctx, []int64{k.ID})[k.ID])
 	v.AboutHTML = RenderKaryaMarkdown(k.AboutMD)
 	v.AboutMD = k.AboutMD
 	return &v, nil
@@ -421,9 +458,14 @@ func (KaryaService) ListAll(ctx context.Context, status string) ([]KaryaView, er
 		return nil, err
 	}
 	names := himpunanNames(ctx)
+	ids := make([]int64, len(rows))
+	for i, k := range rows {
+		ids[i] = k.ID
+	}
+	images := imagesOf(ctx, ids)
 	out := make([]KaryaView, len(rows))
 	for i, k := range rows {
-		out[i] = toKaryaView(k, names)
+		out[i] = toKaryaView(k, names, images[k.ID])
 	}
 	return out, nil
 }

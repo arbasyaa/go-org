@@ -8,6 +8,7 @@ import type { HimpunanOption } from "@/lib/public-content"
 
 const MIN_ABOUT = 50
 const MAX_ABOUT = 20000
+const MAX_IMAGES = 5
 
 type Result = { code: string }
 
@@ -25,7 +26,7 @@ export function KaryaForm() {
     about_md: "",
     website: "", // honeypot
   })
-  const [image, setImage] = useState<File | null>(null)
+  const [images, setImages] = useState<File[]>([])
   const [terms, setTerms] = useState(false)
   const [preview, setPreview] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -62,8 +63,12 @@ export function KaryaForm() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (!image) {
-      setError("Foto karya wajib diunggah.")
+    if (images.length === 0) {
+      setError("Minimal satu foto karya wajib diunggah.")
+      return
+    }
+    if (images.length > MAX_IMAGES) {
+      setError(`Foto maksimal ${MAX_IMAGES}.`)
       return
     }
     if (!terms) {
@@ -74,7 +79,7 @@ export function KaryaForm() {
     try {
       const body = new FormData()
       for (const [k, v] of Object.entries(form)) body.append(k, v)
-      body.append("image", image)
+      for (const file of images) body.append("image", file)
       const res = await apiRequest<Result>("/public/karya", { method: "POST", body })
       setResult(res)
     } catch (err) {
@@ -193,14 +198,37 @@ export function KaryaForm() {
         </div>
       ) : null}
 
-      <Field label="Foto karya" hint="JPG, PNG, atau WebP. Maksimal 8 MB, otomatis dikecilkan.">
+      <Field
+        label={`Foto karya (1-${MAX_IMAGES})`}
+        hint="JPG, PNG, atau WebP. Maksimal 8 MB per foto, otomatis dikecilkan."
+      >
         <input
           required
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp"
-          onChange={(e) => setImage(e.target.files?.[0] ?? null)}
+          onChange={(e) => {
+            const picked = [...(e.target.files ?? [])]
+            if (picked.length > MAX_IMAGES) {
+              setError(`Foto maksimal ${MAX_IMAGES}.`)
+              setImages(picked.slice(0, MAX_IMAGES))
+              return
+            }
+            setError(null)
+            setImages(picked)
+          }}
           className="block w-full font-[family-name:var(--font-landing-body)] text-sm text-[var(--landing-ink)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--landing-ink)] file:px-4 file:py-2 file:font-semibold file:text-[var(--landing-on-ink)]"
         />
+        {images.length ? (
+          <ul className="mt-2 grid grid-cols-5 gap-2">
+            {images.map((file, i) => (
+              <li key={`${file.name}-${i}`} className="overflow-hidden rounded-md border border-[var(--landing-ink)]/15">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={URL.createObjectURL(file)} alt="" className="aspect-square w-full object-cover" />
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </Field>
 
       {/* Honeypot: tersembunyi dari manusia, hanya terisi bot. */}

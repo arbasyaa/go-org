@@ -7,6 +7,7 @@ import { ArrowLeftIcon, CheckIcon, ExternalLinkIcon, Trash2Icon, XIcon } from "l
 import { toast } from "sonner"
 import { PageHeader } from "@/components/page-header"
 import { ErrorState, LoadingState } from "@/components/page-states"
+import { KaryaGallery } from "@/components/landing/karya-gallery"
 import { useAuth } from "@/components/providers/auth-provider"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,6 @@ import { useApi } from "@/hooks/use-api"
 import { apiRequest } from "@/lib/api"
 import { formatDate } from "@/lib/format"
 import type { Karya } from "@/lib/karya"
-import { storageUrl } from "@/lib/storage-url"
 
 /**
  * Halaman kurasi satu karya: pengurus membaca isi aslinya (markdown yang sudah
@@ -104,18 +104,14 @@ export default function AdminKaryaDetailPage({ params }: { params: Promise<{ id:
                 </CardContent>
               </Card>
 
-              {data.image_url ? (
+              {data.images.length ? (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Foto</CardTitle>
+                    <CardTitle>Foto ({data.images.length})</CardTitle>
+                    <CardDescription>Klik untuk memperbesar dan menggeser.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={storageUrl(data.image_url)}
-                      alt=""
-                      className="w-full rounded-lg border object-cover"
-                    />
+                    <KaryaGallery images={data.images} title={data.title} />
                   </CardContent>
                 </Card>
               ) : null}

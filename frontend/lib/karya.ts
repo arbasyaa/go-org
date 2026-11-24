@@ -11,7 +11,8 @@ export type Karya = {
   himpunan: string
   himpunan_id: number
   repo_url: string
-  image_url: string
+  /** Sampai 5 foto, urut sesuai unggahan pengirim. */
+  images: string[]
   about_html?: string
   status: KaryaStatus
   review_note?: string
