@@ -50,7 +50,8 @@ export default async function KaryaIndexPage({ searchParams }: Props) {
         <div className="mx-auto max-w-[1400px] px-6 py-16 md:px-10 md:py-24">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--landing-ink)]/15 pb-4">
             <p className="font-[family-name:var(--font-landing-label)] text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--landing-ink-muted)]">
-              {list.total} karya{aktif ? ` · ${aktif.name}` : ""}
+              {list.total} karya
+              {aktif ? ` · ${himpunanLabel(aktif)}${aktif.institution ? ` — ${aktif.institution}` : ""}` : ""}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <FilterLink href={`/karya?sort=new${himpunanID ? `&himpunan=${himpunanID}` : ""}`} active={sort === "new"}>
@@ -70,6 +71,9 @@ export default async function KaryaIndexPage({ searchParams }: Props) {
           </details>
           <div className="mt-4 hidden md:block">
             <HimpunanFilter himpunan={himpunan} activeID={himpunanID} sort={sort} />
+            <p className="mt-3 font-[family-name:var(--font-landing-body)] text-xs text-[var(--landing-ink-muted)]">
+              Arahkan kursor ke nama himpunan untuk melihat nama kampusnya.
+            </p>
           </div>
 
           {list.items.length ? (
@@ -126,12 +130,23 @@ function FilterLink({ href, active, children }: { href: string; active: boolean;
   )
 }
 
+/**
+ * Filter memakai label yang sama dengan marquee di landing (`short_label`, jatuh
+ * ke `name` bila kosong), bukan nama resmi, supaya satu himpunan tidak muncul
+ * dengan dua ejaan di dua tempat. Kampusnya ditampilkan sebagai tooltip dan teks
+ * bantu, karena banyak label hanya singkatan ("HMP", "HMJ-I") yang tidak
+ * menjelaskan apa pun tanpa nama kampusnya.
+ */
+function himpunanLabel(h: { name: string; shortLabel?: string }) {
+  return h.shortLabel || h.name
+}
+
 function HimpunanFilter({
   himpunan,
   activeID,
   sort,
 }: {
-  himpunan: { no: number; name: string }[]
+  himpunan: { no: number; name: string; shortLabel?: string; institution?: string }[]
   activeID: number
   sort: string
 }) {
@@ -156,13 +171,14 @@ function HimpunanFilter({
           <Link
             href={`/karya?himpunan=${h.no}${suffix}`}
             aria-current={activeID === h.no ? "true" : undefined}
+            title={h.institution ? `${h.name} — ${h.institution}` : h.name}
             className={
               activeID === h.no
                 ? "rounded-full border border-[var(--landing-ink)] px-3 py-1 font-[family-name:var(--font-landing-body)] text-xs font-semibold text-[var(--landing-ink)] no-underline"
                 : "rounded-full border border-transparent px-3 py-1 font-[family-name:var(--font-landing-body)] text-xs text-[var(--landing-ink-muted)] no-underline hover:text-[var(--landing-ink)]"
             }
           >
-            {h.name}
+            {himpunanLabel(h)}
           </Link>
         </li>
       ))}
