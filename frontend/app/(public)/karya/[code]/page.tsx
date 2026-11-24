@@ -27,26 +27,32 @@ export default async function KaryaDetailPage({ params }: Props) {
 
   return (
     <article className="bg-[var(--landing-paper)] text-[var(--landing-ink)]">
-      <div className="mx-auto max-w-[1400px] px-6 pt-32 md:px-10 md:pt-40">
-        <nav aria-label="Breadcrumb" className="font-[family-name:var(--font-landing-label)] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--landing-ink-muted)]">
-          <ol className="flex flex-wrap items-center gap-2">
-            <li><Link href="/" className="no-underline hover:text-[var(--landing-ink)]">Beranda</Link></li>
-            <li aria-hidden className="text-[var(--landing-accent-deep)]">/</li>
-            <li><Link href="/karya" className="no-underline hover:text-[var(--landing-ink)]">Karya</Link></li>
-            <li aria-hidden className="text-[var(--landing-accent-deep)]">/</li>
-            <li aria-current="page">{karya.title}</li>
-          </ol>
-        </nav>
+      {/* Puncak gelap: header melayang transparan saat di posisi paling atas,
+          jadi teks navigasi yang terang butuh latar indigo seperti hero halaman
+          publik lain. Tanpa ini navbar tampak putih di atas paper putih. */}
+      <div className="bg-[var(--landing-ink-deep)] text-[var(--landing-on-ink)]">
+        <div className="mx-auto max-w-[1400px] px-6 pb-12 pt-32 md:px-10 md:pb-16 md:pt-40">
+          <nav
+            aria-label="Breadcrumb"
+            className="font-[family-name:var(--font-landing-label)] text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--landing-on-ink-dim)]"
+          >
+            <ol className="flex flex-wrap items-center gap-2">
+              <li><Link href="/" className="no-underline hover:text-[var(--landing-on-ink)]">Beranda</Link></li>
+              <li aria-hidden className="text-[var(--landing-accent)]">/</li>
+              <li><Link href="/karya" className="no-underline hover:text-[var(--landing-on-ink)]">Karya</Link></li>
+              <li aria-hidden className="text-[var(--landing-accent)]">/</li>
+              <li aria-current="page">{karya.title}</li>
+            </ol>
+          </nav>
 
-        <div className="mt-8">
-          <div className="max-w-[52rem]">
-            <p className="font-[family-name:var(--font-landing-label)] text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--landing-accent-deep)]">
+          <div className="mt-8 max-w-[52rem]">
+            <p className="font-[family-name:var(--font-landing-label)] text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--landing-accent)]">
               {karya.himpunan}
             </p>
             <h1 className="mt-4 font-[family-name:var(--font-landing-display)] text-[clamp(2.2rem,5vw,4rem)] font-extrabold leading-[0.95] tracking-[-0.03em]">
               {karya.title}
             </h1>
-            <p className="mt-4 font-[family-name:var(--font-landing-body)] text-base text-[var(--landing-ink-muted)]">
+            <p className="mt-4 font-[family-name:var(--font-landing-body)] text-base text-[var(--landing-on-ink-dim)]">
               oleh {karya.author_name}
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -54,16 +60,18 @@ export default async function KaryaDetailPage({ params }: Props) {
                 href={karya.repo_url}
                 target="_blank"
                 rel="nofollow noopener ugc"
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-ink)] px-5 py-2.5 font-[family-name:var(--font-landing-body)] text-sm font-semibold text-[var(--landing-on-ink)] no-underline transition-transform duration-300 hover:-translate-y-0.5"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-on-ink)] px-5 py-2.5 font-[family-name:var(--font-landing-body)] text-sm font-semibold text-[var(--landing-ink)] no-underline transition-transform duration-300 hover:-translate-y-0.5"
               >
                 Buka repositori
               </a>
-              <KaryaLike code={karya.code} initial={karya.like_count} />
+              <KaryaLike code={karya.code} initial={karya.like_count} tone="ink" />
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="mt-14 grid gap-10 border-t border-[var(--landing-ink)]/15 pt-10 md:grid-cols-12">
+      <div className="mx-auto max-w-[1400px] px-6 md:px-10">
+        <div className="grid gap-10 py-14 md:grid-cols-12 md:gap-12">
           <div className="md:col-span-8">
             {/* HTML dari RenderKaryaMarkdown: goldmark tanpa raw HTML + SanitizeHTML. */}
             <div className="landing-prose" dangerouslySetInnerHTML={{ __html: karya.about_html ?? "" }} />
@@ -94,7 +102,7 @@ export default async function KaryaDetailPage({ params }: Props) {
           </aside>
         </div>
 
-        <div className="py-16">
+        <div className="pb-16">
           <Link href="/karya" className="font-[family-name:var(--font-landing-body)] text-sm font-semibold text-[var(--landing-ink)] no-underline underline-offset-4 hover:underline">
             ← Semua karya
           </Link>

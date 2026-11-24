@@ -24,7 +24,7 @@ function visitorID() {
  * Tombol like. Yang tampil hanya angka — tidak ada penanda "kamu sudah menyukai",
  * karena identitas pemberi like tidak untuk ditampilkan.
  */
-export function KaryaLike({ code, initial }: { code: string; initial: number }) {
+export function KaryaLike({ code, initial, tone = "paper" }: { code: string; initial: number; tone?: "paper" | "ink" }) {
   const [count, setCount] = useState(initial)
   const [busy, setBusy] = useState(false)
 
@@ -51,13 +51,15 @@ export function KaryaLike({ code, initial }: { code: string; initial: number }) 
       disabled={busy}
       aria-label={`Sukai karya ini, saat ini ${count} suka`}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-[var(--landing-ink)]/20 px-5 py-2.5 font-[family-name:var(--font-landing-body)] text-sm font-semibold text-[var(--landing-ink)] transition-colors duration-300",
-        "hover:border-[var(--landing-ink)]/60 disabled:opacity-60"
+        "inline-flex items-center gap-2 rounded-full border px-5 py-2.5 font-[family-name:var(--font-landing-body)] text-sm font-semibold transition-colors duration-300 disabled:opacity-60",
+        tone === "ink"
+          ? "border-[var(--landing-on-ink)]/25 text-[var(--landing-on-ink)] hover:border-[var(--landing-on-ink)]/60"
+          : "border-[var(--landing-ink)]/20 text-[var(--landing-ink)] hover:border-[var(--landing-ink)]/60"
       )}
     >
-      <span aria-hidden className="text-[var(--landing-accent-deep)]">♥</span>
+      <span aria-hidden className={tone === "ink" ? "text-[var(--landing-accent)]" : "text-[var(--landing-accent-deep)]"}>♥</span>
       <span className="tabular-nums">{count}</span>
-      <span className="text-[var(--landing-ink-muted)]">suka</span>
+      <span className={tone === "ink" ? "text-[var(--landing-on-ink-dim)]" : "text-[var(--landing-ink-muted)]"}>suka</span>
     </button>
   )
 }
