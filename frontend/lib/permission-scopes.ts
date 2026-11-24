@@ -41,6 +41,13 @@ export const ADMIN_PANEL_PERMISSIONS = new Set([
   "storage.delete",
   "storage.manage",
   "backup.manage",
+  // Konten publik: dikelola dari panel admin, bukan portal anggota.
+  "press_release.manage",
+  "merch.manage",
+  "himpunan.manage",
+  "work_program.manage",
+  "landing.manage",
+  "karya.manage",
 ])
 
 export type PermissionScope = "member" | "admin" | "both"

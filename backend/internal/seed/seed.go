@@ -52,6 +52,7 @@ var permissionDefs = []struct {
 	{"himpunan.manage", "himpunan", "Manage member associations (himpunan)"},
 	{"work_program.manage", "work_program", "Manage work programs"},
 	{"landing.manage", "landing", "Manage landing page sections"},
+	{"karya.manage", "karya", "Curate karya showcase (publish, reject, delete)"},
 	{"announcement.create", "announcement", "Create announcements"},
 	{"finance.view", "finance", "View finance"},
 	{"finance.create", "finance", "Create finance transactions"},
