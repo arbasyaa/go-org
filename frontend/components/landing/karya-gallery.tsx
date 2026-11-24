@@ -60,14 +60,14 @@ export function KaryaGallery({ images, title }: { images: string[]; title: strin
       </ul>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-[min(92vw,1100px)] border-0 bg-transparent p-0 shadow-none">
+        <DialogContent className="max-w-[min(96vw,1500px)] gap-0 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-[min(96vw,1500px)]">
           <DialogTitle className="sr-only">{title}</DialogTitle>
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={storageUrl(images[index])}
               alt={`${title} — foto ${index + 1} dari ${images.length}`}
-              className="max-h-[82vh] w-full rounded-[var(--landing-radius-md)] object-contain"
+              className="mx-auto block max-h-[88vh] w-full rounded-[var(--landing-radius-md)] object-contain"
             />
             {images.length > 1 ? (
               <>
